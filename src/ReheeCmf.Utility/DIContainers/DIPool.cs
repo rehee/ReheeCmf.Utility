@@ -75,7 +75,12 @@ namespace ReheeCmf.DIContainers
             var instance = Activator.CreateInstance(containerType) as ProfileContainer;
             if (instance != null)
             {
-              _containers[containerType] = instance;
+              // Get the KeyType from the container
+              Type? keyType = GetContainerKeyType(containerType);
+              if (keyType != null)
+              {
+                _containers.TryAdd(keyType, instance);
+              }
             }
           }
           catch (Exception)
@@ -119,7 +124,20 @@ namespace ReheeCmf.DIContainers
         {
           try
           {
-            // Execute actions on the profile type
+            // Instantiate the profile
+            var profileInstance = Activator.CreateInstance(profileType) as Profile;
+            if (profileInstance != null)
+            {
+              // Get the container by profile's KeyType
+              var keyType = profileInstance.KeyType;
+              if (_containers.TryGetValue(keyType, out var container))
+              {
+                // Add profile to the corresponding container
+                container.AddProfile(profileInstance);
+              }
+            }
+
+            // Execute actions on the profile type (in second loop)
             if (actions != null)
             {
               foreach (var action in actions)
@@ -135,25 +153,6 @@ namespace ReheeCmf.DIContainers
                 }
               }
             }
-
-            // Try to find a matching container for this profile
-            var matchingContainer = FindMatchingContainer(profileType);
-            if (matchingContainer != null)
-            {
-              try
-              {
-                var profileInstance = Activator.CreateInstance(profileType) as Profile;
-                if (profileInstance != null)
-                {
-                  matchingContainer.AddProfile(profileInstance);
-                }
-              }
-              catch (Exception)
-              {
-                // Skip profiles that can't be instantiated or added
-                continue;
-              }
-            }
           }
           catch (Exception)
           {
@@ -167,123 +166,72 @@ namespace ReheeCmf.DIContainers
     }
 
     /// <summary>
-    /// Finds a ProfileContainer that can hold the given Profile type.
-    /// Checks if the container's generic type parameter matches the profile type.
+    /// Gets the KeyType from a ProfileContainer type by examining its generic arguments.
     /// </summary>
-    private static ProfileContainer? FindMatchingContainer(Type profileType)
+    private static Type? GetContainerKeyType(Type containerType)
     {
       var genericProfileContainerDef = typeof(ProfileContainer<,>);
       
-      foreach (var kvp in _containers)
+      var baseType = containerType.BaseType;
+      while (baseType != null)
       {
-        var containerType = kvp.Key;
-        
-        // Check if the container is a generic ProfileContainer<TKey, TProfile>
-        var baseType = containerType.BaseType;
-        while (baseType != null)
+        if (baseType.IsGenericType)
         {
-          if (baseType.IsGenericType)
+          var genericDef = baseType.GetGenericTypeDefinition();
+          if (genericDef == genericProfileContainerDef)
           {
-            var genericDef = baseType.GetGenericTypeDefinition();
-            if (genericDef == genericProfileContainerDef)
+            var genericArgs = baseType.GetGenericArguments();
+            if (genericArgs.Length >= 1)
             {
-              var genericArgs = baseType.GetGenericArguments();
-              if (genericArgs.Length >= 2)
-              {
-                var profileTypeArg = genericArgs[1];
-                // Check if profileType is assignable to the container's profile type parameter
-                if (profileTypeArg.IsAssignableFrom(profileType))
-                {
-                  return kvp.Value;
-                }
-              }
+              return genericArgs[0]; // TKey is the first generic argument
             }
           }
-          baseType = baseType.BaseType;
         }
+        baseType = baseType.BaseType;
       }
 
       return null;
     }
 
     /// <summary>
-    /// Gets a Profile by string key from all containers.
+    /// Gets all Profiles by string key from all containers.
     /// </summary>
     /// <param name="key">The string key to search for.</param>
-    /// <returns>The Profile if found, otherwise null.</returns>
-    public static Profile? GetProfile(string key)
+    /// <returns>Enumerable of all matching profiles.</returns>
+    public static IEnumerable<Profile> GetProfile(string key)
     {
       if (!_initialized || string.IsNullOrEmpty(key))
       {
-        return null;
+        return Enumerable.Empty<Profile>();
       }
 
-      foreach (var container in _containers.Values)
-      {
-        var profile = container.GetProfile(key);
-        if (profile != null)
-        {
-          return profile;
-        }
-      }
-
-      return null;
+      return _containers.Values
+        .Select(b => b.GetProfile(key))
+        .Where(b => b != null)
+        .Cast<Profile>();
     }
 
     /// <summary>
-    /// Gets a Profile by enum key from all containers.
+    /// Gets all Profiles by enum key from all containers.
     /// </summary>
     /// <param name="key">The enum key to search for.</param>
     /// <param name="keyOverride">Optional string key override when enum value is 0.</param>
-    /// <returns>The Profile if found, otherwise null.</returns>
-    public static Profile? GetProfile(Enum key, string? keyOverride = null)
+    /// <returns>Enumerable of all matching profiles.</returns>
+    public static IEnumerable<Profile> GetProfile(Enum key, string? keyOverride = null)
     {
       if (!_initialized || key == null)
       {
-        return null;
+        return Enumerable.Empty<Profile>();
       }
 
-      foreach (var container in _containers.Values)
-      {
-        var profile = container.GetProfile(key, keyOverride);
-        if (profile != null)
-        {
-          return profile;
-        }
-      }
-
-      return null;
+      return _containers.Values
+        .Select(b => b.GetProfile(key, keyOverride))
+        .Where(b => b != null)
+        .Cast<Profile>();
     }
 
     /// <summary>
-    /// Gets a Profile by generic type from all containers.
-    /// </summary>
-    /// <typeparam name="T">The Profile type to retrieve.</typeparam>
-    /// <returns>The Profile if found, otherwise null.</returns>
-    public static T? GetProfile<T>() where T : Profile
-    {
-      if (!_initialized)
-      {
-        return null;
-      }
-
-      foreach (var container in _containers.Values)
-      {
-        var profiles = container.GetAllProfiles();
-        foreach (var profile in profiles)
-        {
-          if (profile is T typedProfile)
-          {
-            return typedProfile;
-          }
-        }
-      }
-
-      return null;
-    }
-
-    /// <summary>
-    /// Gets all profiles of a specific type from all containers.
+    /// Gets all profiles of a specific type from the container associated with T's KeyType.
     /// </summary>
     /// <typeparam name="T">The Profile type to retrieve.</typeparam>
     /// <returns>Enumerable of all matching profiles.</returns>
@@ -294,41 +242,43 @@ namespace ReheeCmf.DIContainers
         return Enumerable.Empty<T>();
       }
 
-      var result = new List<T>();
-      foreach (var container in _containers.Values)
+      // Get the KeyType from T
+      var keyType = typeof(T).BaseType;
+      if (keyType != null && keyType.IsGenericType && keyType.GetGenericTypeDefinition() == typeof(Profile<>))
       {
-        var profiles = container.GetAllProfiles();
-        foreach (var profile in profiles)
+        var genericArgs = keyType.GetGenericArguments();
+        if (genericArgs.Length > 0)
         {
-          if (profile is T typedProfile)
+          var enumKeyType = genericArgs[0];
+          if (_containers.TryGetValue(enumKeyType, out var container))
           {
-            result.Add(typedProfile);
+            return container.GetAllProfiles().OfType<T>();
           }
         }
       }
 
-      return result;
+      return Enumerable.Empty<T>();
     }
 
     /// <summary>
-    /// Gets a ProfileContainer by its type.
+    /// Gets all profiles from the container associated with the specified enum type.
     /// </summary>
-    /// <typeparam name="TContainer">The container type to retrieve.</typeparam>
-    /// <returns>The container if found, otherwise null.</returns>
-    public static TContainer? GetContainer<TContainer>() where TContainer : ProfileContainer
+    /// <typeparam name="TKey">The enum type that serves as the key type.</typeparam>
+    /// <returns>Enumerable of all profiles in the container.</returns>
+    public static IEnumerable<Profile> GetAllProfilesByKeyType<TKey>() where TKey : Enum
     {
       if (!_initialized)
       {
-        return null;
+        return Enumerable.Empty<Profile>();
       }
 
-      var containerType = typeof(TContainer);
-      if (_containers.TryGetValue(containerType, out var container))
+      var keyType = typeof(TKey);
+      if (_containers.TryGetValue(keyType, out var container))
       {
-        return container as TContainer;
+        return container.GetAllProfiles();
       }
 
-      return null;
+      return Enumerable.Empty<Profile>();
     }
 
     /// <summary>

@@ -103,44 +103,33 @@ namespace ReheeCmf.Utility.Tests
     }
 
     [Fact]
-    public void GetProfile_ByString_WithoutInitialization_ReturnsNull()
+    public void GetProfile_ByString_WithoutInitialization_ReturnsEmpty()
     {
       // Act
-      var profile = DIPool.GetProfile("First");
+      var profiles = DIPool.GetProfile("First");
 
       // Assert
-      Assert.Null(profile);
+      Assert.Empty(profiles);
     }
 
     [Fact]
-    public void GetProfile_ByEnum_WithoutInitialization_ReturnsNull()
+    public void GetProfile_ByEnum_WithoutInitialization_ReturnsEmpty()
     {
       // Act
-      var profile = DIPool.GetProfile(TestProfileKey.First);
+      var profiles = DIPool.GetProfile(TestProfileKey.First);
 
       // Assert
-      Assert.Null(profile);
+      Assert.Empty(profiles);
     }
 
     [Fact]
-    public void GetProfile_Generic_WithoutInitialization_ReturnsNull()
+    public void GetProfile_Generic_WithoutInitialization_ReturnsEmpty()
     {
       // Act
-      var profile = DIPool.GetProfile<TestProfile>();
+      var profiles = DIPool.GetAllProfiles<TestProfile>();
 
       // Assert
-      Assert.Null(profile);
-    }
-
-    [Fact]
-    public void Initialize_ScansAndCreatesContainers()
-    {
-      // Act
-      DIPool.Initialize();
-
-      // Assert
-      var container = DIPool.GetContainer<TestProfileContainer>();
-      Assert.NotNull(container);
+      Assert.Empty(profiles);
     }
 
     [Fact]
@@ -150,8 +139,8 @@ namespace ReheeCmf.Utility.Tests
       DIPool.Initialize();
 
       // Assert
-      var profile = DIPool.GetProfile<TestProfile>();
-      Assert.NotNull(profile);
+      var profiles = DIPool.GetAllProfiles<TestProfile>();
+      Assert.NotEmpty(profiles);
     }
 
     [Fact]
@@ -161,11 +150,11 @@ namespace ReheeCmf.Utility.Tests
       DIPool.Initialize();
 
       // Act
-      var profile = DIPool.GetProfile("First");
+      var profiles = DIPool.GetProfile("First");
 
       // Assert
-      Assert.NotNull(profile);
-      Assert.IsAssignableFrom<Profile>(profile);
+      Assert.NotEmpty(profiles);
+      Assert.All(profiles, p => Assert.IsAssignableFrom<Profile>(p));
     }
 
     [Fact]
@@ -175,11 +164,11 @@ namespace ReheeCmf.Utility.Tests
       DIPool.Initialize();
 
       // Act
-      var profile = DIPool.GetProfile(TestProfileKey.First);
+      var profiles = DIPool.GetProfile(TestProfileKey.First);
 
       // Assert
-      Assert.NotNull(profile);
-      Assert.IsAssignableFrom<Profile>(profile);
+      Assert.NotEmpty(profiles);
+      Assert.All(profiles, p => Assert.IsAssignableFrom<Profile>(p));
     }
 
     [Fact]
@@ -189,9 +178,11 @@ namespace ReheeCmf.Utility.Tests
       DIPool.Initialize();
 
       // Act
-      var profile = DIPool.GetProfile<TestProfile>();
+      var profiles = DIPool.GetAllProfiles<TestProfile>();
 
       // Assert
+      Assert.NotEmpty(profiles);
+      var profile = profiles.FirstOrDefault();
       Assert.NotNull(profile);
       Assert.IsType<TestProfile>(profile);
       Assert.Equal(TestProfileKey.First, profile.Key);
@@ -253,43 +244,43 @@ namespace ReheeCmf.Utility.Tests
     }
 
     [Fact]
-    public void GetContainer_ReturnsCorrectContainer()
+    public void GetAllProfilesByKeyType_ReturnsCorrectProfiles()
     {
       // Arrange
       DIPool.Initialize();
 
       // Act
-      var container = DIPool.GetContainer<TestProfileContainer>();
+      var profiles = DIPool.GetAllProfilesByKeyType<TestProfileKey>();
 
       // Assert
-      Assert.NotNull(container);
-      Assert.IsType<TestProfileContainer>(container);
+      Assert.NotNull(profiles);
+      Assert.NotEmpty(profiles);
     }
 
     [Fact]
-    public void GetProfile_WithNullKey_ReturnsNull()
+    public void GetProfile_WithNullKey_ReturnsEmpty()
     {
       // Arrange
       DIPool.Initialize();
 
       // Act
-      var profile = DIPool.GetProfile(default(string));
+      var profiles = DIPool.GetProfile(default(string));
 
       // Assert
-      Assert.Null(profile);
+      Assert.Empty(profiles);
     }
 
     [Fact]
-    public void GetProfile_WithEmptyKey_ReturnsNull()
+    public void GetProfile_WithEmptyKey_ReturnsEmpty()
     {
       // Arrange
       DIPool.Initialize();
 
       // Act
-      var profile = DIPool.GetProfile("");
+      var profiles = DIPool.GetProfile("");
 
       // Assert
-      Assert.Null(profile);
+      Assert.Empty(profiles);
     }
 
     [Fact]
