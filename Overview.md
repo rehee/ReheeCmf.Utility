@@ -15,6 +15,7 @@
 - `ReheeCmf.Users` - User and tenant related types
 - `ReheeCmf.Contexts` - Context and repository interfaces
 - `ReheeCmf.Enums` - Enumeration types
+- `ReheeCmf.Profiles` - Profile and profile container types
 
 ## Types
 
@@ -82,6 +83,27 @@ var item = new KeyValueItemDTO
 ```
 
 ## Entity Types
+
+### IWithName
+
+Location: `ReheeCmf.Entities`
+
+Interface for entities with name and description properties.
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `Name` | `string?` | Name of the entity |
+| `Description` | `string?` | Description of the entity |
+
+**Usage Example:**
+```csharp
+public class MyEntity : IWithName
+{
+  public string? Name { get; set; }
+  public string? Description { get; set; }
+}
+```
 
 ### IId\<T\>
 
@@ -322,6 +344,185 @@ Enumeration representing entity states for change tracking.
 context.TrackEntity(myEntity, EnumEntityState.Modified);
 ```
 
+## Profile Types
+
+### Profile (Abstract Base Class)
+
+Location: `ReheeCmf.Profiles`
+
+Abstract base class for profile types. Implements `IWithName` and is typically used as a singleton pattern. Contains key management with support for both integer and string keys.
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `Name` | `string?` | Name of the profile (from IWithName) |
+| `Description` | `string?` | Description of the profile (from IWithName) |
+| `KeyType` | `Type` | Abstract property returning the type of the key |
+| `KeyValue` | `int` | Abstract property for integer key value |
+| `StringKeyValue` | `string?` | Abstract property for string key value |
+| `StringKeyValueOverride` | `string?` | Optional override for string key value (settable) |
+| `EffectiveKey` | `string?` | Returns StringKeyValue when KeyValue != 0, otherwise returns StringKeyValueOverride |
+
+**Usage Example:**
+```csharp
+public class MyProfile : Profile
+{
+  public override Type KeyType => typeof(int);
+  private int _keyValue;
+  public override int KeyValue => _keyValue;
+  public override string? StringKeyValue => _keyValue.ToString();
+  
+  public void SetKey(int value)
+  {
+    _keyValue = value;
+  }
+}
+
+var profile = new MyProfile
+{
+  Name = "Configuration Profile",
+  Description = "Main configuration",
+  StringKeyValueOverride = "main-config"
+};
+profile.SetKey(0);
+
+string key = profile.EffectiveKey; // Returns "main-config"
+```
+
+### Profile\<T\> (Abstract Generic Class)
+
+Location: `ReheeCmf.Profiles`
+
+Generic abstract profile class that inherits from `Profile`. The type parameter `T` must be an enum type. The `Key` property must be implemented by derived classes.
+
+**Type Parameter:**
+- `T` - Type of the key, must be an Enum
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `KeyType` | `Type` | Returns `typeof(T)` (override) |
+| `Key` | `T` | Abstract property - strongly-typed enum key that must be implemented by derived class |
+| `StringKeyValue` | `string?` | Returns the string representation of the Key (override, computed from Key) |
+| `KeyValue` | `int` | Returns the integer value of the Key (override, computed from Key) |
+
+**Usage Example:**
+```csharp
+public enum ProfileCategory
+{
+  System = 1,
+  User = 2,
+  Admin = 3
+}
+
+public class CategoryProfile : Profile<ProfileCategory>
+{
+  private readonly ProfileCategory _category;
+  
+  public CategoryProfile(ProfileCategory category)
+  {
+    _category = category;
+  }
+  
+  public override ProfileCategory Key => _category;
+}
+
+var profile = new CategoryProfile(ProfileCategory.System)
+{
+  Name = "System Profile",
+  Description = "System level configuration"
+};
+
+// Access strongly-typed key
+ProfileCategory category = profile.Key; // Returns ProfileCategory.System
+int keyValue = profile.KeyValue; // Returns 1
+string? keyString = profile.StringKeyValue; // Returns "System"
+```
+
+### ProfileContainer (Abstract Base Class)
+
+Location: `ReheeCmf.Profiles`
+
+Abstract base class for managing a collection of Profile instances. Provides dictionary-based storage and retrieval.
+
+**Methods:**
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `GetProfile(string key)` | `Profile?` | Retrieves a profile by key, returns null if not found |
+| `AddProfile(Profile profile)` | `void` | Adds or updates a profile using its EffectiveKey property. Throws ArgumentNullException if profile is null or key is empty. Includes null check for Profiles dictionary |
+| `RemoveProfile(string key)` | `bool` | Removes a profile by key, returns true if successful, false if key is null/empty or not found. Includes null check for Profiles dictionary |
+| `GetAllProfiles()` | `IEnumerable<Profile>` | Returns all profiles in the container |
+
+**Usage Example:**
+```csharp
+public class MyProfileContainer : ProfileContainer
+{
+}
+
+var container = new MyProfileContainer();
+var profile = new MyProfile();
+profile.SetKey(1);
+profile.Name = "Config1";
+
+container.AddProfile(profile); // Uses profile.EffectiveKey as the key
+
+var retrieved = container.GetProfile("1");
+var allProfiles = container.GetAllProfiles();
+```
+
+### ProfileContainer\<TKey, TProfile\> (Abstract Generic Class)
+
+Location: `ReheeCmf.Profiles`
+
+Generic abstract profile container that inherits from `ProfileContainer`. Provides strongly-typed access to profiles.
+
+**Type Parameters:**
+- `TKey` - Type of the enum key, must be an Enum
+- `TProfile` - Type of profiles in the container, must inherit from Profile<TKey>
+
+**Methods:**
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `GetProfile(string key)` | `TProfile?` | Retrieves a strongly-typed profile by key, returns null if not found |
+| `AddProfile(TProfile profile)` | `void` | Adds or updates a strongly-typed profile using its effective key |
+| `GetAllProfiles()` | `IEnumerable<TProfile>` | Returns all profiles in the container as strongly-typed collection |
+
+**Usage Example:**
+```csharp
+public enum ProfileCategory
+{
+  System = 1,
+  User = 2
+}
+
+public class CategoryProfile : Profile<ProfileCategory>
+{
+  private readonly ProfileCategory _category;
+  
+  public CategoryProfile(ProfileCategory category)
+  {
+    _category = category;
+  }
+  
+  public override ProfileCategory Key => _category;
+}
+
+public class CategoryProfileContainer : ProfileContainer<ProfileCategory, CategoryProfile>
+{
+}
+
+var container = new CategoryProfileContainer();
+var profile = new CategoryProfile(ProfileCategory.System)
+{
+  Name = "System Profile"
+};
+
+container.AddProfile(profile); // Uses profile.GetEffectiveKey() as the key
+
+CategoryProfile? retrieved = container.GetProfile("1");
+IEnumerable<CategoryProfile> allProfiles = container.GetAllProfiles();
+```
+
 ## Helper Methods
 
 ### ContentResponseHelper
@@ -559,11 +760,17 @@ ReheeCmf.Utility/
 │       │   ├── ITokenDTOContext.cs      # Token DTO context interface
 │       │   └── IWithTenant.cs           # With tenant interface
 │       ├── Entities/
-│       │   └── IId.cs                   # Generic ID interface
+│       │   ├── IId.cs                   # Generic ID interface
+│       │   └── IWithName.cs             # Name and description interface
 │       ├── Enums/
 │       │   └── EnumEntityState.cs       # Entity state enumeration
 │       ├── Helpers/
 │       │   └── ContentResponseHelper.cs # Extension methods
+│       ├── Profiles/
+│       │   ├── Profile.cs               # Abstract base profile class
+│       │   ├── ProfileGeneric.cs        # Generic profile<T> class
+│       │   ├── ProfileContainer.cs      # Abstract profile container
+│       │   └── ProfileContainerGeneric.cs # Generic profile container<T>
 │       ├── Users/
 │       │   ├── Tenant.cs                # Tenant class
 │       │   └── TokenDTO.cs              # Token DTO class
@@ -573,6 +780,7 @@ ReheeCmf.Utility/
     └── ReheeCmf.Utility.Tests/
         ├── ContentResponseHelperTests.cs  # ContentResponse helper tests
         ├── EntityTypesTests.cs            # Entity types tests
+        ├── ProfileTests.cs                # Profile and ProfileContainer tests
         ├── UnitTest1.cs                   # Sample test
         └── ReheeCmf.Utility.Tests.csproj
 ```

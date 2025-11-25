@@ -1,0 +1,27 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ReheeCmf.Profiles
+{
+  public abstract class ProfileContainer<TKey, TProfile> : ProfileContainer 
+    where TKey : Enum 
+    where TProfile : Profile<TKey>
+  {
+    public new TProfile? GetProfile(string key)
+    {
+      var profile = base.GetProfile(key);
+      return profile as TProfile;
+    }
+
+    public void AddProfile(TProfile profile)
+    {
+      base.AddProfile(profile);
+    }
+
+    public new IEnumerable<TProfile> GetAllProfiles()
+    {
+      return base.GetAllProfiles().OfType<TProfile>();
+    }
+  }
+}
