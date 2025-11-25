@@ -12,7 +12,12 @@ namespace ReheeCmf.Profiles
     {
       get
       {
-        return Key.ToString();
+        var key = Key;
+        if (key == null)
+        {
+          throw new InvalidOperationException("Key property must not return null.");
+        }
+        return key.ToString();
       }
     }
 
@@ -20,7 +25,12 @@ namespace ReheeCmf.Profiles
     {
       get
       {
-        return Convert.ToInt32(Key);
+        var key = Key;
+        if (key == null)
+        {
+          throw new InvalidOperationException("Key property must not return null.");
+        }
+        return Convert.ToInt32(key);
       }
       set
       {
