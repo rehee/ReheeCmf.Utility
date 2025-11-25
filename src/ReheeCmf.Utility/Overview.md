@@ -24,6 +24,7 @@ Abstract base class for API response wrappers.
 | Property | Type | Description |
 |----------|------|-------------|
 | `ObjContent` | `object?` | Abstract read-only property returning the content as object |
+| `ContentType` | `Type` | Abstract read-only property returning the type of the content |
 | `Success` | `bool?` | Indicates if the request was successful |
 | `Status` | `HttpStatusCode` | HTTP status code representing the response status |
 | `Errors` | `IEnumerable<Error>?` | Collection of errors if the request failed |
@@ -39,6 +40,7 @@ Generic implementation of `ContentResponse` for strongly-typed responses.
 |----------|------|-------------|
 | `Content` | `T?` | Strongly-typed content of the response |
 | `ObjContent` | `object?` | Returns `Content` as object (override) |
+| `ContentType` | `Type` | Returns `typeof(T)` (override) |
 
 **Usage Example:**
 ```csharp
@@ -64,12 +66,12 @@ Static class providing extension methods for both `ContentResponse<T>` and base 
 
 #### SetContent (Generic)
 
-Sets all properties on a `ContentResponse<T>` with typed content.
+Sets all properties on a `ContentResponse<T>` with object content that is converted to type T.
 
 ```csharp
 public static void SetContent<T>(
     this ContentResponse<T> response,
-    T? content,
+    object? content,
     bool? success,
     HttpStatusCode? code,
     params Error[] errors)
@@ -77,10 +79,16 @@ public static void SetContent<T>(
 
 **Parameters:**
 - `response`: The response instance to modify
-- `content`: Typed content value
+- `content`: Content value as object (uses pattern matching `content is T` for type checking, falls back to `Convert.ChangeType`)
 - `success`: Whether the operation succeeded
 - `code`: HTTP status code
 - `errors`: Optional error collection
+
+**Behavior:**
+- Uses pattern matching to check if content is already type T
+- Falls back to `Convert.ChangeType` for conversion
+- Sets `Success` to `false` if conversion fails
+- Supports nullable types via `Nullable.GetUnderlyingType`
 
 **Example:**
 ```csharp
@@ -90,7 +98,7 @@ response.SetContent(42, true, HttpStatusCode.OK);
 
 #### SetContent (Non-Generic)
 
-Sets all properties on a base `ContentResponse` using reflection to determine the generic type and convert content.
+Sets all properties on a base `ContentResponse` using the `ContentType` property to invoke the generic method.
 
 ```csharp
 public static void SetContent(
@@ -103,16 +111,16 @@ public static void SetContent(
 
 **Parameters:**
 - `response`: The response instance to modify (must be a `ContentResponse<T>` instance)
-- `content`: Content value (will be converted to type T via reflection)
+- `content`: Content value as object
 - `success`: Whether the operation succeeded
 - `code`: HTTP status code
 - `errors`: Optional error collection
 
 **Behavior:**
-- Automatically detects the generic type T of the response
-- Attempts to convert the content to type T
-- If conversion fails, sets `Success` to `false` and content to default
-- Supports nullable types via `Nullable.GetUnderlyingType`
+- Uses `ContentType` property to determine the generic type T
+- Caches the reflection method lookup for performance using `ConcurrentDictionary`
+- Invokes the generic `SetContent<T>` method with the content
+- If invocation fails, sets `Success` to `false`
 
 **Example:**
 ```csharp
