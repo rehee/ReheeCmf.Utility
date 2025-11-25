@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ReheeCmf.Utility
+namespace ReheeCmf
 {
     public class Class1
     {
