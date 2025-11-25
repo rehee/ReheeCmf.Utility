@@ -4,66 +4,80 @@ using System.Collections.Generic;
 
 namespace ReheeCmf.Profiles
 {
-	public abstract class ProfileContainer
-	{
-		protected Dictionary<string, Profile> Profiles { get; set; }
+  public abstract class ProfileContainer
+  {
+    protected Dictionary<string, Profile> Profiles { get; set; }
 
-		protected ProfileContainer()
-		{
-			Profiles = new Dictionary<string, Profile>();
-		}
+    protected ProfileContainer()
+    {
+      Profiles = new Dictionary<string, Profile>();
+    }
 
-		public virtual Profile? GetProfile(Enum key, string? keyOverride = null)
-		{
-			int intValue = Convert.ToInt32(key);
-			if (Profiles.TryGetValue(intValue == 0 ? keyOverride ?? "" : key.ToString(), out var profile))
-			{
-				return profile;
-			}
-			return null;
-		}
+    public virtual Profile? GetProfile(string key)
+    {
+      if (string.IsNullOrEmpty(key))
+      {
+        return null;
+      }
 
-		public void AddProfile(Profile profile)
-		{
-			if (profile == null)
-			{
-				return;
-			}
+      if (Profiles.TryGetValue(key, out var profile))
+      {
+        return profile;
+      }
+      return null;
+    }
 
-			var key = profile.EffectiveKey;
-			if (string.IsNullOrEmpty(key))
-			{
-				return;
-			}
+    public virtual Profile? GetProfile(Enum key, string? keyOverride = null)
+    {
+      int intValue = Convert.ToInt32(key);
+      if (Profiles.TryGetValue(intValue == 0 ? keyOverride ?? "" : key.ToString(), out var profile))
+      {
+        return profile;
+      }
+      return null;
+    }
 
-			if (Profiles == null)
-			{
-				return;
-			}
+    public void AddProfile(Profile profile)
+    {
+      if (profile == null)
+      {
+        return;
+      }
 
-			Profiles.TryAdd(key, profile);
-		}
+      var key = profile.EffectiveKey;
+      if (string.IsNullOrEmpty(key))
+      {
+        return;
+      }
 
-		public bool RemoveProfile(string key, out Profile? value)
-		{
-			if (string.IsNullOrEmpty(key))
-			{
-				value = null;
-				return false;
-			}
+      if (Profiles == null)
+      {
+        return;
+      }
 
-			if (Profiles == null)
-			{
-				value = null;
-				return false;
-			}
+      Profiles.TryAdd(key, profile);
+    }
 
-			return Profiles.TryRemove(key, out value);
-		}
+    public bool RemoveProfile(string key, out Profile? value)
+    {
+      if (string.IsNullOrEmpty(key))
+      {
+        value = null;
+        return false;
+      }
 
-		public IEnumerable<Profile> GetAllProfiles()
-		{
-			return Profiles.Values;
-		}
-	}
+      if (Profiles == null)
+      {
+        value = null;
+        return false;
+      }
+
+      return Profiles.TryRemove(key, out value);
+    }
+
+    public IEnumerable<Profile> GetAllProfiles()
+    {
+      return Profiles.Values;
+    }
+  }
 }
