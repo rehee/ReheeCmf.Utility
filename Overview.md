@@ -158,7 +158,7 @@ Represents a tenant in a multi-tenant application.
 |----------|------|-------------|
 | `TenantID` | `Guid?` | Unique tenant identifier |
 | `TenantName` | `string?` | Name of the tenant |
-| `TenantSUbDomain` | `string?` | Tenant subdomain |
+| `TenantSubDomain` | `string?` | Tenant subdomain |
 | `TenantUrl` | `string?` | Tenant URL |
 | `TenantLevel` | `int?` | Tenant level or tier |
 | `MainConnectionString` | `string?` | Primary database connection string |
