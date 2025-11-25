@@ -15,6 +15,7 @@
 - `ReheeCmf.Users` - User and tenant related types
 - `ReheeCmf.Contexts` - Context and repository interfaces
 - `ReheeCmf.Enums` - Enumeration types
+- `ReheeCmf.Profiles` - Profile and profile container types
 
 ## Types
 
@@ -82,6 +83,27 @@ var item = new KeyValueItemDTO
 ```
 
 ## Entity Types
+
+### IWithName
+
+Location: `ReheeCmf.Entities`
+
+Interface for entities with name and description properties.
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `Name` | `string?` | Name of the entity |
+| `Description` | `string?` | Description of the entity |
+
+**Usage Example:**
+```csharp
+public class MyEntity : IWithName
+{
+  public string? Name { get; set; }
+  public string? Description { get; set; }
+}
+```
 
 ### IId\<T\>
 
@@ -322,6 +344,155 @@ Enumeration representing entity states for change tracking.
 context.TrackEntity(myEntity, EnumEntityState.Modified);
 ```
 
+## Profile Types
+
+### Profile (Abstract Base Class)
+
+Location: `ReheeCmf.Profiles`
+
+Abstract base class for profile types. Implements `IWithName` and is typically used as a singleton pattern. Contains key management with support for both integer and string keys.
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `Name` | `string?` | Name of the profile (from IWithName) |
+| `Description` | `string?` | Description of the profile (from IWithName) |
+| `KeyType` | `Type` | Abstract property returning the type of the key |
+| `KeyValue` | `int` | Integer key value |
+| `StringKeyValue` | `string?` | String key value |
+
+**Methods:**
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `GetEffectiveKey()` | `string` | Returns StringKeyValue if KeyValue is 0 and StringKeyValue is not empty, otherwise returns KeyValue as string |
+
+**Usage Example:**
+```csharp
+public class MyProfile : Profile
+{
+  public override Type KeyType => typeof(int);
+}
+
+var profile = new MyProfile
+{
+  Name = "Configuration Profile",
+  Description = "Main configuration",
+  KeyValue = 0,
+  StringKeyValue = "main-config"
+};
+
+string key = profile.GetEffectiveKey(); // Returns "main-config"
+```
+
+### Profile\<T\> (Abstract Generic Class)
+
+Location: `ReheeCmf.Profiles`
+
+Generic abstract profile class that inherits from `Profile`. The type parameter `T` must be an enum type.
+
+**Type Parameter:**
+- `T` - Type of the key, must be an Enum
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `KeyType` | `Type` | Returns `typeof(T)` (override) |
+| `Key` | `T?` | Strongly-typed enum key |
+
+**Methods:**
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `SetKey(T key)` | `void` | Sets the Key and updates KeyValue to the integer representation |
+| `GetKey()` | `T?` | Returns the strongly-typed key |
+
+**Usage Example:**
+```csharp
+public enum ProfileCategory
+{
+  System = 1,
+  User = 2,
+  Admin = 3
+}
+
+public class CategoryProfile : Profile<ProfileCategory>
+{
+}
+
+var profile = new CategoryProfile
+{
+  Name = "System Profile",
+  Description = "System level configuration"
+};
+profile.SetKey(ProfileCategory.System);
+
+// Access strongly-typed key
+ProfileCategory? category = profile.GetKey(); // Returns ProfileCategory.System
+int keyValue = profile.KeyValue; // Returns 1
+```
+
+### ProfileContainer (Abstract Base Class)
+
+Location: `ReheeCmf.Profiles`
+
+Abstract base class for managing a collection of Profile instances. Provides dictionary-based storage and retrieval.
+
+**Methods:**
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `GetProfile(string key)` | `Profile?` | Retrieves a profile by key, returns null if not found |
+| `AddProfile(string key, Profile profile)` | `void` | Adds or updates a profile with the specified key |
+| `RemoveProfile(string key)` | `bool` | Removes a profile by key, returns true if successful |
+| `GetAllProfiles()` | `IEnumerable<Profile>` | Returns all profiles in the container |
+
+**Usage Example:**
+```csharp
+public class MyProfileContainer : ProfileContainer
+{
+}
+
+var container = new MyProfileContainer();
+var profile = new MyProfile { Name = "Config1" };
+container.AddProfile("config1", profile);
+
+var retrieved = container.GetProfile("config1");
+var allProfiles = container.GetAllProfiles();
+```
+
+### ProfileContainer\<T\> (Abstract Generic Class)
+
+Location: `ReheeCmf.Profiles`
+
+Generic abstract profile container that inherits from `ProfileContainer`. Provides strongly-typed access to profiles of type `T`.
+
+**Type Parameter:**
+- `T` - Type of profiles in the container, must inherit from Profile
+
+**Methods:**
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `GetProfile(string key)` | `T?` | Retrieves a strongly-typed profile by key, returns null if not found |
+| `AddProfile(string key, T profile)` | `void` | Adds or updates a strongly-typed profile with the specified key |
+| `GetAllProfiles()` | `IEnumerable<T>` | Returns all profiles in the container as strongly-typed collection |
+
+**Usage Example:**
+```csharp
+public class MyGenericProfileContainer : ProfileContainer<CategoryProfile>
+{
+}
+
+var container = new MyGenericProfileContainer();
+var profile = new CategoryProfile
+{
+  Name = "Admin Profile"
+};
+profile.SetKey(ProfileCategory.Admin);
+
+container.AddProfile("admin", profile);
+
+CategoryProfile? retrieved = container.GetProfile("admin");
+IEnumerable<CategoryProfile> allProfiles = container.GetAllProfiles();
+```
+
 ## Helper Methods
 
 ### ContentResponseHelper
@@ -559,11 +730,17 @@ ReheeCmf.Utility/
 │       │   ├── ITokenDTOContext.cs      # Token DTO context interface
 │       │   └── IWithTenant.cs           # With tenant interface
 │       ├── Entities/
-│       │   └── IId.cs                   # Generic ID interface
+│       │   ├── IId.cs                   # Generic ID interface
+│       │   └── IWithName.cs             # Name and description interface
 │       ├── Enums/
 │       │   └── EnumEntityState.cs       # Entity state enumeration
 │       ├── Helpers/
 │       │   └── ContentResponseHelper.cs # Extension methods
+│       ├── Profiles/
+│       │   ├── Profile.cs               # Abstract base profile class
+│       │   ├── ProfileGeneric.cs        # Generic profile<T> class
+│       │   ├── ProfileContainer.cs      # Abstract profile container
+│       │   └── ProfileContainerGeneric.cs # Generic profile container<T>
 │       ├── Users/
 │       │   ├── Tenant.cs                # Tenant class
 │       │   └── TokenDTO.cs              # Token DTO class
@@ -573,6 +750,7 @@ ReheeCmf.Utility/
     └── ReheeCmf.Utility.Tests/
         ├── ContentResponseHelperTests.cs  # ContentResponse helper tests
         ├── EntityTypesTests.cs            # Entity types tests
+        ├── ProfileTests.cs                # Profile and ProfileContainer tests
         ├── UnitTest1.cs                   # Sample test
         └── ReheeCmf.Utility.Tests.csproj
 ```
