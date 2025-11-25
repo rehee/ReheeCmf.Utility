@@ -448,9 +448,10 @@ Abstract base class for managing a collection of Profile instances. Provides dic
 **Methods:**
 | Method | Return Type | Description |
 |--------|-------------|-------------|
-| `GetProfile(string key)` | `Profile?` | Retrieves a profile by key, returns null if not found |
-| `AddProfile(Profile profile)` | `void` | Adds or updates a profile using its EffectiveKey property. Throws ArgumentNullException if profile is null or key is empty. Includes null check for Profiles dictionary |
-| `RemoveProfile(string key)` | `bool` | Removes a profile by key, returns true if successful, false if key is null/empty or not found. Includes null check for Profiles dictionary |
+| `GetProfile(string key)` | `Profile?` | Retrieves a profile by string key, returns null if not found or key is null/empty |
+| `GetProfile(Enum key, string? keyOverride = null)` | `Profile?` | Retrieves a profile by enum key. If enum value is 0, uses keyOverride; otherwise uses enum name. Returns null if not found |
+| `AddProfile(Profile profile)` | `void` | Adds or updates a profile using its EffectiveKey property. Returns early if profile is null, key is empty, or Profiles dictionary is null |
+| `RemoveProfile(string key, out Profile? value)` | `bool` | Removes a profile by key and outputs the removed profile. Returns true if successful, false if key is null/empty, Profiles dictionary is null, or key not found. Outputs null if removal failed |
 | `GetAllProfiles()` | `IEnumerable<Profile>` | Returns all profiles in the container |
 
 **Usage Example:**
@@ -466,7 +467,16 @@ profile.Name = "Config1";
 
 container.AddProfile(profile); // Uses profile.EffectiveKey as the key
 
+// String-based retrieval
 var retrieved = container.GetProfile("1");
+
+// Remove with out parameter
+bool removed = container.RemoveProfile("1", out var removedProfile);
+if (removed)
+{
+  Console.WriteLine($"Removed: {removedProfile?.Name}");
+}
+
 var allProfiles = container.GetAllProfiles();
 ```
 
@@ -483,7 +493,8 @@ Generic abstract profile container that inherits from `ProfileContainer`. Provid
 **Methods:**
 | Method | Return Type | Description |
 |--------|-------------|-------------|
-| `GetProfile(string key)` | `TProfile?` | Retrieves a strongly-typed profile by key, returns null if not found |
+| `GetProfile(string key)` | `TProfile?` | Retrieves a strongly-typed profile by string key, returns null if not found |
+| `GetProfile(TKey enumKey, string keyOverride)` | `TProfile?` | Retrieves a strongly-typed profile by enum key with optional override |
 | `AddProfile(TProfile profile)` | `void` | Adds or updates a strongly-typed profile using its effective key |
 | `GetAllProfiles()` | `IEnumerable<TProfile>` | Returns all profiles in the container as strongly-typed collection |
 
@@ -517,9 +528,14 @@ var profile = new CategoryProfile(ProfileCategory.System)
   Name = "System Profile"
 };
 
-container.AddProfile(profile); // Uses profile.GetEffectiveKey() as the key
+container.AddProfile(profile); // Uses profile.EffectiveKey as the key
 
-CategoryProfile? retrieved = container.GetProfile("1");
+// String-based retrieval
+CategoryProfile? retrieved = container.GetProfile("System");
+
+// Enum-based retrieval with optional override
+CategoryProfile? retrieved2 = container.GetProfile(ProfileCategory.System, null);
+
 IEnumerable<CategoryProfile> allProfiles = container.GetAllProfiles();
 ```
 

@@ -12,6 +12,7 @@ namespace ReheeCmf.Utility.Tests
     // Test enum for testing Profile<T>
     private enum TestProfileType
     {
+      None = 0,
       Type1 = 1,
       Type2 = 2,
       Type3 = 3
@@ -153,11 +154,15 @@ namespace ReheeCmf.Utility.Tests
     }
 
     [Fact]
-    public void ProfileContainer_AddProfile_WithNullProfile_ThrowsArgumentNullException()
+    public void ProfileContainer_AddProfile_WithNullProfile_DoesNotThrow()
     {
       var container = new TestProfileContainer();
 
-      Assert.Throws<ArgumentNullException>(() => container.AddProfile(null!));
+      // Should not throw, just returns early
+      container.AddProfile(null!);
+      
+      var allProfiles = container.GetAllProfiles();
+      Assert.Empty(allProfiles);
     }
 
     [Fact]
@@ -182,9 +187,11 @@ namespace ReheeCmf.Utility.Tests
       profile.SetStringKeyValue("1");
       container.AddProfile(profile);
 
-      var removed = container.RemoveProfile("1");
+      var removed = container.RemoveProfile("1", out var removedProfile);
 
       Assert.True(removed);
+      Assert.NotNull(removedProfile);
+      Assert.Equal("Profile1", removedProfile?.Name);
       Assert.Null(container.GetProfile("1"));
     }
 
@@ -193,9 +200,10 @@ namespace ReheeCmf.Utility.Tests
     {
       var container = new TestProfileContainer();
 
-      var removed = container.RemoveProfile("non-existent");
+      var removed = container.RemoveProfile("non-existent", out var value);
 
       Assert.False(removed);
+      Assert.Null(value);
     }
 
     [Fact]
@@ -203,9 +211,10 @@ namespace ReheeCmf.Utility.Tests
     {
       var container = new TestProfileContainer();
 
-      var removed = container.RemoveProfile(null!);
+      var removed = container.RemoveProfile(null!, out var value);
 
       Assert.False(removed);
+      Assert.Null(value);
     }
 
     [Fact]
@@ -258,6 +267,60 @@ namespace ReheeCmf.Utility.Tests
 
       Assert.Equal(2, allProfiles.Count());
       Assert.All(allProfiles, p => Assert.IsType<TestGenericProfile>(p));
+    }
+
+    [Fact]
+    public void ProfileContainerGeneric_GetProfileByEnum_RetrievesCorrectProfile()
+    {
+      var container = new TestGenericProfileContainer();
+      var profile = new TestGenericProfile(TestProfileType.Type1)
+      {
+        Name = "EnumProfile"
+      };
+
+      container.AddProfile(profile);
+
+      var retrieved = container.GetProfile(TestProfileType.Type1, "");
+      Assert.NotNull(retrieved);
+      Assert.Equal("EnumProfile", retrieved?.Name);
+      Assert.Equal(TestProfileType.Type1, retrieved?.Key);
+    }
+
+    [Fact]
+    public void ProfileContainer_GetProfileByEnum_WithZeroValueAndOverride_UsesOverride()
+    {
+      var container = new TestProfileContainer();
+      var profile = new TestProfile
+      {
+        Name = "OverrideProfile",
+        StringKeyValueOverride = "custom-key"
+      };
+      profile.SetKeyValue(0);
+      profile.SetStringKeyValue(null);
+
+      container.AddProfile(profile);
+
+      // Use the defined enum value None (0)
+      var retrieved = container.GetProfile(TestProfileType.None, "custom-key");
+      Assert.NotNull(retrieved);
+      Assert.Equal("OverrideProfile", retrieved?.Name);
+    }
+
+    [Fact]
+    public void ProfileContainer_GetProfileByEnum_WithNonZeroValue_UsesEnumName()
+    {
+      var container = new TestGenericProfileContainer();
+      var profile = new TestGenericProfile(TestProfileType.Type2)
+      {
+        Name = "EnumNameProfile"
+      };
+
+      container.AddProfile(profile);
+
+      // Override parameter is not used for non-zero enum values
+      var retrieved = container.GetProfile(TestProfileType.Type2, "");
+      Assert.NotNull(retrieved);
+      Assert.Equal("EnumNameProfile", retrieved?.Name);
     }
   }
 }
