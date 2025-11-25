@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -8,10 +9,45 @@ namespace ReheeCmf.Helpers
 {
     public static class ContentResponseHelper
     {
-        public static void SetContent<T>(this ContentResponse<T> response, T? content, bool? success, HttpStatusCode? code, params Error[] errors)
+        private static readonly ConcurrentDictionary<Type, MethodInfo> _methodCache = new ConcurrentDictionary<Type, MethodInfo>();
+
+        public static void SetContent<T>(this ContentResponse<T> response, object? content, bool? success, HttpStatusCode? code, params Error[] errors)
         {
-            response.Success = success;
-            response.Content = content;
+            if (content is T typedContent)
+            {
+                response.Success = success;
+                response.Content = typedContent;
+            }
+            else if (content == null)
+            {
+                response.Success = success;
+                response.Content = default;
+            }
+            else
+            {
+                // Try to convert the content
+                try
+                {
+                    var targetType = typeof(T);
+                    var underlyingType = Nullable.GetUnderlyingType(targetType);
+                    
+                    if (underlyingType != null)
+                    {
+                        response.Content = (T)Convert.ChangeType(content, underlyingType);
+                        response.Success = success;
+                    }
+                    else
+                    {
+                        response.Content = (T)Convert.ChangeType(content, targetType);
+                        response.Success = success;
+                    }
+                }
+                catch
+                {
+                    response.Success = false;
+                    response.Content = default;
+                }
+            }
 
             if (code.HasValue)
             {
@@ -26,26 +62,23 @@ namespace ReheeCmf.Helpers
 
         public static void SetContent(this ContentResponse response, object? content, bool? success, HttpStatusCode? code, params Error[] errors)
         {
-            var responseType = response.GetType();
-            
-            if (!responseType.IsGenericType || responseType.GetGenericTypeDefinition() != typeof(ContentResponse<>))
-            {
-                response.Success = false;
-                return;
-            }
-
-            var genericArgument = responseType.GetGenericArguments()[0];
+            var contentType = response.ContentType;
             
             try
             {
-                // Find the generic SetContent<T> method
-                var method = typeof(ContentResponseHelper)
-                    .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                    .FirstOrDefault(m => 
-                        m.Name == nameof(SetContent) && 
-                        m.IsGenericMethod && 
-                        m.GetParameters().Length == 5 &&
-                        m.GetParameters()[0].ParameterType.IsGenericType);
+                // Get or create cached method
+                var method = _methodCache.GetOrAdd(contentType, type =>
+                {
+                    var genericMethod = typeof(ContentResponseHelper)
+                        .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                        .FirstOrDefault(m => 
+                            m.Name == nameof(SetContent) && 
+                            m.IsGenericMethod && 
+                            m.GetParameters().Length == 5 &&
+                            m.GetParameters()[0].ParameterType.IsGenericType);
+
+                    return genericMethod?.MakeGenericMethod(type)!;
+                });
 
                 if (method == null)
                 {
@@ -53,38 +86,7 @@ namespace ReheeCmf.Helpers
                     return;
                 }
 
-                method = method.MakeGenericMethod(genericArgument);
-
-                object? convertedContent = null;
-                if (content != null)
-                {
-                    try
-                    {
-                        if (genericArgument.IsAssignableFrom(content.GetType()))
-                        {
-                            convertedContent = content;
-                        }
-                        else
-                        {
-                            var underlyingType = Nullable.GetUnderlyingType(genericArgument);
-                            if (underlyingType != null)
-                            {
-                                convertedContent = Convert.ChangeType(content, underlyingType);
-                            }
-                            else
-                            {
-                                convertedContent = Convert.ChangeType(content, genericArgument);
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        response.Success = false;
-                        return;
-                    }
-                }
-
-                method.Invoke(null, new[] { response, convertedContent, success, code, errors });
+                method.Invoke(null, new[] { response, content, success, code, errors });
             }
             catch
             {
@@ -92,7 +94,7 @@ namespace ReheeCmf.Helpers
             }
         }
 
-        public static void SetSuccess<T>(this ContentResponse<T> response, T? content)
+        public static void SetSuccess<T>(this ContentResponse<T> response, object? content)
         {
             response.SetContent(content, true, HttpStatusCode.OK);
         }
