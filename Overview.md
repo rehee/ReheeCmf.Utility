@@ -15,7 +15,8 @@
 - `ReheeCmf.Users` - User and tenant related types
 - `ReheeCmf.Contexts` - Context and repository interfaces
 - `ReheeCmf.Enums` - Enumeration types
-- `ReheeCmf.Profiles` - Profile and profile container types
+- `ReheeCmf.Profiles` - Profile types
+- `ReheeCmf.ProfileContainers` - Profile container types
 
 ## Types
 
@@ -441,7 +442,7 @@ string? keyString = profile.StringKeyValue; // Returns "System"
 
 ### ProfileContainer (Abstract Base Class)
 
-Location: `ReheeCmf.Profiles`
+Location: `ReheeCmf.ProfileContainers`
 
 Abstract base class for managing a collection of Profile instances. Provides dictionary-based storage and retrieval.
 
@@ -482,7 +483,7 @@ var allProfiles = container.GetAllProfiles();
 
 ### ProfileContainer\<TKey, TProfile\> (Abstract Generic Class)
 
-Location: `ReheeCmf.Profiles`
+Location: `ReheeCmf.ProfileContainers`
 
 Generic abstract profile container that inherits from `ProfileContainer`. Provides strongly-typed access to profiles.
 
@@ -700,6 +701,116 @@ ContentResponse response = new ContentResponse<string>();
 response.SetErrors(HttpStatusCode.NotFound, new Error());
 ```
 
+### DictionaryHelper
+
+Location: `ReheeCmf.Helpers`
+
+Static class providing extension methods for `IDictionary<TKey, TValue>` that add safe dictionary operations with null checks.
+
+#### TryAddOrUpdate
+
+Adds a new key-value pair or updates an existing one.
+
+```csharp
+public static bool TryAddOrUpdate<TKey, TValue>(
+    this IDictionary<TKey, TValue> dictionary,
+    TKey key,
+    TValue value)
+```
+
+**Parameters:**
+- `dictionary`: The dictionary to modify
+- `key`: The key to add or update
+- `value`: The value to set
+
+**Returns:**
+- `true` if the operation succeeded
+- `false` if dictionary or key is null
+
+**Behavior:**
+- Returns false if dictionary is null
+- Returns false if key is null
+- If key exists, updates the value
+- If key doesn't exist, adds the key-value pair
+- Returns true on successful add or update
+
+**Example:**
+```csharp
+var dict = new Dictionary<string, int>();
+bool result = dict.TryAddOrUpdate("key1", 100); // Adds, returns true
+result = dict.TryAddOrUpdate("key1", 200);      // Updates, returns true
+// dict["key1"] == 200
+```
+
+#### TryAdd
+
+Attempts to add a key-value pair only if the key doesn't already exist.
+
+```csharp
+public static bool TryAdd<TKey, TValue>(
+    this IDictionary<TKey, TValue> dictionary,
+    TKey key,
+    TValue value)
+```
+
+**Parameters:**
+- `dictionary`: The dictionary to modify
+- `key`: The key to add
+- `value`: The value to add
+
+**Returns:**
+- `true` if the key-value pair was added
+- `false` if dictionary is null, key is null, or key already exists
+
+**Behavior:**
+- Returns false if dictionary is null
+- Returns false if key is null
+- Returns false if key already exists (does not modify existing value)
+- Adds the key-value pair if key doesn't exist and returns true
+
+**Example:**
+```csharp
+var dict = new Dictionary<string, int>();
+bool result = dict.TryAdd("key1", 100); // Adds, returns true
+result = dict.TryAdd("key1", 200);      // Does not add, returns false
+// dict["key1"] == 100
+```
+
+#### TryRemove
+
+Attempts to remove a key-value pair and returns the removed value.
+
+```csharp
+public static bool TryRemove<TKey, TValue>(
+    this IDictionary<TKey, TValue> dictionary,
+    TKey key,
+    out TValue? value)
+```
+
+**Parameters:**
+- `dictionary`: The dictionary to modify
+- `key`: The key to remove
+- `value`: Output parameter receiving the removed value (or default if removal failed)
+
+**Returns:**
+- `true` if the key was found and removed
+- `false` if dictionary is null, key is null, or key doesn't exist
+
+**Behavior:**
+- Returns false and sets value to default if dictionary is null
+- Returns false and sets value to default if key is null
+- Returns false and sets value to default if key doesn't exist
+- Removes the key-value pair if key exists, sets value to the removed value, and returns true
+
+**Example:**
+```csharp
+var dict = new Dictionary<string, int> { { "key1", 100 } };
+bool result = dict.TryRemove("key1", out int value); // Removes, returns true
+// result == true, value == 100, dict is empty
+result = dict.TryRemove("key1", out value);          // Does not remove, returns false
+// result == false, value == 0
+```
+
 ## Usage Patterns
 
 ### Basic Success Response (Generic)
@@ -781,10 +892,12 @@ ReheeCmf.Utility/
 │       ├── Enums/
 │       │   └── EnumEntityState.cs       # Entity state enumeration
 │       ├── Helpers/
-│       │   └── ContentResponseHelper.cs # Extension methods
+│       │   ├── ContentResponseHelper.cs # Extension methods for ContentResponse
+│       │   └── DictionaryHelper.cs      # Extension methods for IDictionary
 │       ├── Profiles/
 │       │   ├── Profile.cs               # Abstract base profile class
-│       │   ├── ProfileGeneric.cs        # Generic profile<T> class
+│       │   └── ProfileGeneric.cs        # Generic profile<T> class
+│       ├── ProfileContainers/
 │       │   ├── ProfileContainer.cs      # Abstract profile container
 │       │   └── ProfileContainerGeneric.cs # Generic profile container<T>
 │       ├── Users/
@@ -795,6 +908,7 @@ ReheeCmf.Utility/
 └── tests/
     └── ReheeCmf.Utility.Tests/
         ├── ContentResponseHelperTests.cs  # ContentResponse helper tests
+        ├── DictionaryHelperTests.cs       # Dictionary helper tests
         ├── EntityTypesTests.cs            # Entity types tests
         ├── ProfileTests.cs                # Profile and ProfileContainer tests
         ├── UnitTest1.cs                   # Sample test
