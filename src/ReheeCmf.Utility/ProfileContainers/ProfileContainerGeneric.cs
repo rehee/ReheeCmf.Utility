@@ -1,8 +1,9 @@
+using ReheeCmf.Profiles;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ReheeCmf.Profiles
+namespace ReheeCmf.ProfileContainers
 {
 	public abstract class ProfileContainer<TKey, TProfile> : ProfileContainer
 	  where TKey : Enum

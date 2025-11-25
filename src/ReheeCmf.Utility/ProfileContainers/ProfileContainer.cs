@@ -1,8 +1,9 @@
 using ReheeCmf.Helpers;
+using ReheeCmf.Profiles;
 using System;
 using System.Collections.Generic;
 
-namespace ReheeCmf.Profiles
+namespace ReheeCmf.ProfileContainers
 {
 	public abstract class ProfileContainer
 	{
@@ -16,13 +17,16 @@ namespace ReheeCmf.Profiles
 		public virtual Profile? GetProfile(Enum key, string? keyOverride = null)
 		{
 			int intValue = Convert.ToInt32(key);
-			if (Profiles.TryGetValue(intValue == 0 ? keyOverride ?? "" : key.ToString(), out var profile))
+			return GetProfile(intValue == 0 ? keyOverride ?? "" : key.ToString());
+		}
+		public Profile? GetProfile(string key)
+		{
+			if (Profiles.TryGetValue(key, out var profile))
 			{
 				return profile;
 			}
 			return null;
 		}
-
 		public void AddProfile(Profile profile)
 		{
 			if (profile == null)

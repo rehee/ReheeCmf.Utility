@@ -3,6 +3,7 @@ using System.Linq;
 using Xunit;
 using ReheeCmf.Entities;
 using ReheeCmf.Profiles;
+using ReheeCmf.ProfileContainers;
 
 namespace ReheeCmf.Utility.Tests
 {
