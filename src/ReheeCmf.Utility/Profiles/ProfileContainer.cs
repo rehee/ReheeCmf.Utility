@@ -31,7 +31,7 @@ namespace ReheeCmf.Profiles
       var key = profile.GetEffectiveKey();
       if (string.IsNullOrEmpty(key))
       {
-        throw new ArgumentException("Profile key cannot be null or empty", nameof(profile));
+        throw new ArgumentException("Profile's effective key cannot be null or empty", nameof(profile));
       }
 
       Profiles[key] = profile;

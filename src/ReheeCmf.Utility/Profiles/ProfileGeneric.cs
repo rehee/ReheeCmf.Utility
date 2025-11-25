@@ -24,8 +24,7 @@ namespace ReheeCmf.Profiles
       }
       set
       {
-        // KeyValue is derived from Key, so setting it has no effect
-        // but we need this setter to override the base property
+        throw new NotSupportedException("KeyValue cannot be set directly. It is computed from the Key property.");
       }
     }
   }
