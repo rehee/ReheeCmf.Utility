@@ -64,11 +64,30 @@ namespace ReheeCmf.Helpers
       var currentType = type;
       while (currentType != null)
       {
-        if (currentType.GetInterfaces().Any(i => i == interfaceType || (i.IsGenericType && interfaceType.IsGenericType && i.GetGenericTypeDefinition() == interfaceType.GetGenericTypeDefinition())))
+        if (currentType.GetInterfaces().Any(i => IsMatchingInterface(i, interfaceType)))
         {
           return true;
         }
         currentType = currentType.BaseType;
+      }
+
+      return false;
+    }
+
+    /// <summary>
+    /// Helper method to check if an interface matches the target interface type.
+    /// Handles both regular and generic interface matching.
+    /// </summary>
+    private static bool IsMatchingInterface(Type interfaceToCheck, Type targetInterface)
+    {
+      if (interfaceToCheck == targetInterface)
+      {
+        return true;
+      }
+
+      if (interfaceToCheck.IsGenericType && targetInterface.IsGenericType)
+      {
+        return interfaceToCheck.GetGenericTypeDefinition() == targetInterface.GetGenericTypeDefinition();
       }
 
       return false;
@@ -96,11 +115,35 @@ namespace ReheeCmf.Helpers
       var currentType = type;
       while (currentType != null)
       {
-        if (currentType.BaseType == baseType || (currentType.BaseType != null && currentType.BaseType.IsGenericType && baseType.IsGenericType && currentType.BaseType.GetGenericTypeDefinition() == baseType.GetGenericTypeDefinition()))
+        if (IsMatchingBaseType(currentType.BaseType, baseType))
         {
           return true;
         }
         currentType = currentType.BaseType;
+      }
+
+      return false;
+    }
+
+    /// <summary>
+    /// Helper method to check if a base type matches the target base type.
+    /// Handles both regular and generic type matching.
+    /// </summary>
+    private static bool IsMatchingBaseType(Type? baseTypeToCheck, Type targetBaseType)
+    {
+      if (baseTypeToCheck == null)
+      {
+        return false;
+      }
+
+      if (baseTypeToCheck == targetBaseType)
+      {
+        return true;
+      }
+
+      if (baseTypeToCheck.IsGenericType && targetBaseType.IsGenericType)
+      {
+        return baseTypeToCheck.GetGenericTypeDefinition() == targetBaseType.GetGenericTypeDefinition();
       }
 
       return false;

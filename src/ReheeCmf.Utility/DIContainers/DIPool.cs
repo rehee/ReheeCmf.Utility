@@ -172,6 +172,8 @@ namespace ReheeCmf.DIContainers
     /// </summary>
     private static ProfileContainer? FindMatchingContainer(Type profileType)
     {
+      var genericProfileContainerDef = typeof(ProfileContainer<,>);
+      
       foreach (var kvp in _containers)
       {
         var containerType = kvp.Key;
@@ -183,7 +185,7 @@ namespace ReheeCmf.DIContainers
           if (baseType.IsGenericType)
           {
             var genericDef = baseType.GetGenericTypeDefinition();
-            if (genericDef.Name.StartsWith("ProfileContainer"))
+            if (genericDef == genericProfileContainerDef)
             {
               var genericArgs = baseType.GetGenericArguments();
               if (genericArgs.Length >= 2)

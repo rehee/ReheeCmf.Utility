@@ -273,7 +273,7 @@ namespace ReheeCmf.Utility.Tests
       DIPool.Initialize();
 
       // Act
-      var profile = DIPool.GetProfile((string)null);
+      var profile = DIPool.GetProfile(default(string));
 
       // Assert
       Assert.Null(profile);
