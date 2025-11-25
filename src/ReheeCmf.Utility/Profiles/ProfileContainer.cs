@@ -28,10 +28,15 @@ namespace ReheeCmf.Profiles
         throw new ArgumentNullException(nameof(profile));
       }
 
-      var key = profile.GetEffectiveKey();
+      var key = profile.EffectiveKey;
       if (string.IsNullOrEmpty(key))
       {
         throw new ArgumentException("Profile's effective key cannot be null or empty", nameof(profile));
+      }
+
+      if (Profiles == null)
+      {
+        throw new InvalidOperationException("Profiles dictionary is not initialized");
       }
 
       Profiles[key] = profile;
@@ -40,6 +45,11 @@ namespace ReheeCmf.Profiles
     public bool RemoveProfile(string key)
     {
       if (string.IsNullOrEmpty(key))
+      {
+        return false;
+      }
+
+      if (Profiles == null)
       {
         return false;
       }

@@ -8,34 +8,8 @@ namespace ReheeCmf.Profiles
 
     public abstract T Key { get; }
 
-    public string KeyStringValue
-    {
-      get
-      {
-        return GetValidatedKey().ToString();
-      }
-    }
+    public override string? StringKeyValue => Key?.ToString() ?? string.Empty;
 
-    public override int KeyValue
-    {
-      get
-      {
-        return Convert.ToInt32(GetValidatedKey());
-      }
-      set
-      {
-        throw new NotSupportedException("KeyValue cannot be set directly. It is computed from the Key property.");
-      }
-    }
-
-    private T GetValidatedKey()
-    {
-      var key = Key;
-      if (key == null)
-      {
-        throw new InvalidOperationException("Key property must not return null.");
-      }
-      return key;
-    }
+    public override int KeyValue => Key != null ? Convert.ToInt32(Key) : 0;
   }
 }
