@@ -12,12 +12,7 @@ namespace ReheeCmf.Profiles
     {
       get
       {
-        var key = Key;
-        if (key == null)
-        {
-          throw new InvalidOperationException("Key property must not return null.");
-        }
-        return key.ToString();
+        return GetValidatedKey().ToString();
       }
     }
 
@@ -25,17 +20,22 @@ namespace ReheeCmf.Profiles
     {
       get
       {
-        var key = Key;
-        if (key == null)
-        {
-          throw new InvalidOperationException("Key property must not return null.");
-        }
-        return Convert.ToInt32(key);
+        return Convert.ToInt32(GetValidatedKey());
       }
       set
       {
         throw new NotSupportedException("KeyValue cannot be set directly. It is computed from the Key property.");
       }
+    }
+
+    private T GetValidatedKey()
+    {
+      var key = Key;
+      if (key == null)
+      {
+        throw new InvalidOperationException("Key property must not return null.");
+      }
+      return key;
     }
   }
 }
