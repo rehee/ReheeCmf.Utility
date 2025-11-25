@@ -358,30 +358,35 @@ Abstract base class for profile types. Implements `IWithName` and is typically u
 | `Name` | `string?` | Name of the profile (from IWithName) |
 | `Description` | `string?` | Description of the profile (from IWithName) |
 | `KeyType` | `Type` | Abstract property returning the type of the key |
-| `KeyValue` | `int` | Integer key value |
-| `StringKeyValue` | `string?` | String key value |
-
-**Methods:**
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `GetEffectiveKey()` | `string` | Returns KeyValue as string if non-zero, otherwise returns StringKeyValue if not empty, otherwise returns "0" |
+| `KeyValue` | `int` | Abstract property for integer key value |
+| `StringKeyValue` | `string?` | Abstract property for string key value |
+| `StringKeyValueOverride` | `string?` | Optional override for string key value (settable) |
+| `EffectiveKey` | `string?` | Returns StringKeyValue when KeyValue != 0, otherwise returns StringKeyValueOverride |
 
 **Usage Example:**
 ```csharp
 public class MyProfile : Profile
 {
   public override Type KeyType => typeof(int);
+  private int _keyValue;
+  public override int KeyValue => _keyValue;
+  public override string? StringKeyValue => _keyValue.ToString();
+  
+  public void SetKey(int value)
+  {
+    _keyValue = value;
+  }
 }
 
 var profile = new MyProfile
 {
   Name = "Configuration Profile",
   Description = "Main configuration",
-  KeyValue = 0,
-  StringKeyValue = "main-config"
+  StringKeyValueOverride = "main-config"
 };
+profile.SetKey(0);
 
-string key = profile.GetEffectiveKey(); // Returns "main-config"
+string key = profile.EffectiveKey; // Returns "main-config"
 ```
 
 ### Profile\<T\> (Abstract Generic Class)
@@ -398,7 +403,7 @@ Generic abstract profile class that inherits from `Profile`. The type parameter 
 |----------|------|-------------|
 | `KeyType` | `Type` | Returns `typeof(T)` (override) |
 | `Key` | `T` | Abstract property - strongly-typed enum key that must be implemented by derived class |
-| `KeyStringValue` | `string` | Returns the string representation of the Key |
+| `StringKeyValue` | `string?` | Returns the string representation of the Key (override, computed from Key) |
 | `KeyValue` | `int` | Returns the integer value of the Key (override, computed from Key) |
 
 **Usage Example:**
@@ -431,7 +436,7 @@ var profile = new CategoryProfile(ProfileCategory.System)
 // Access strongly-typed key
 ProfileCategory category = profile.Key; // Returns ProfileCategory.System
 int keyValue = profile.KeyValue; // Returns 1
-string keyString = profile.KeyStringValue; // Returns "System"
+string? keyString = profile.StringKeyValue; // Returns "System"
 ```
 
 ### ProfileContainer (Abstract Base Class)
@@ -444,8 +449,8 @@ Abstract base class for managing a collection of Profile instances. Provides dic
 | Method | Return Type | Description |
 |--------|-------------|-------------|
 | `GetProfile(string key)` | `Profile?` | Retrieves a profile by key, returns null if not found |
-| `AddProfile(Profile profile)` | `void` | Adds or updates a profile using its effective key. Throws ArgumentNullException if profile is null or key is empty |
-| `RemoveProfile(string key)` | `bool` | Removes a profile by key, returns true if successful, false if key is null/empty or not found |
+| `AddProfile(Profile profile)` | `void` | Adds or updates a profile using its EffectiveKey property. Throws ArgumentNullException if profile is null or key is empty. Includes null check for Profiles dictionary |
+| `RemoveProfile(string key)` | `bool` | Removes a profile by key, returns true if successful, false if key is null/empty or not found. Includes null check for Profiles dictionary |
 | `GetAllProfiles()` | `IEnumerable<Profile>` | Returns all profiles in the container |
 
 **Usage Example:**
@@ -455,12 +460,11 @@ public class MyProfileContainer : ProfileContainer
 }
 
 var container = new MyProfileContainer();
-var profile = new MyProfile 
-{ 
-  Name = "Config1",
-  KeyValue = 1
-};
-container.AddProfile(profile); // Uses profile.GetEffectiveKey() as the key
+var profile = new MyProfile();
+profile.SetKey(1);
+profile.Name = "Config1";
+
+container.AddProfile(profile); // Uses profile.EffectiveKey as the key
 
 var retrieved = container.GetProfile("1");
 var allProfiles = container.GetAllProfiles();
