@@ -10,7 +10,7 @@ namespace ReheeCmf.Users
 
 		public string? RefreshTokenString { get; set; }
 
-		public DateTime? ExpireUCTTime { get; set; }
+		public DateTime? ExpireUTCTime { get; set; }
 
 		public string? UserId { get; set; }
 

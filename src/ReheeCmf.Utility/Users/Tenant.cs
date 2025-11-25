@@ -8,7 +8,7 @@ namespace ReheeCmf.Users
 
 		public string? TenantName { get; set; }
 
-		public string? TenantSUbDomain { get; set; }
+		public string? TenantSubDomain { get; set; }
 
 		public string? TenantUrl { get; set; }
 
