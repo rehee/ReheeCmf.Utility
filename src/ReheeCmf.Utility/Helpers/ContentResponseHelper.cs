@@ -22,7 +22,17 @@ namespace ReheeCmf.Helpers
             {
                 try
                 {
-                    response.Content = (T)Convert.ChangeType(content, typeof(T));
+                    var targetType = typeof(T);
+                    var underlyingType = Nullable.GetUnderlyingType(targetType);
+                    
+                    if (underlyingType != null)
+                    {
+                        response.Content = (T)Convert.ChangeType(content, underlyingType);
+                    }
+                    else
+                    {
+                        response.Content = (T)Convert.ChangeType(content, targetType);
+                    }
                 }
                 catch
                 {

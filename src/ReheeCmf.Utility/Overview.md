@@ -191,6 +191,7 @@ ReheeCmf.Utility/
 │       │   └── Error.cs              # Error placeholder class
 │       ├── Helpers/
 │       │   └── ContentResponseHelper.cs  # Extension methods
+│       ├── Overview.md               # This documentation file
 │       └── ReheeCmf.Utility.csproj
 └── tests/
     └── ReheeCmf.Utility.Tests/

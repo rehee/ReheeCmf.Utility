@@ -140,4 +140,26 @@ public class ContentResponseHelperTests
 
         Assert.Equal(42, objContent);
     }
+
+    [Fact]
+    public void SetContent_WithNullableIntContent_ConvertsContent()
+    {
+        var response = new ContentResponse<int?>();
+
+        response.SetContent(42, true, HttpStatusCode.OK);
+
+        Assert.Equal(42, response.Content);
+        Assert.True(response.Success);
+    }
+
+    [Fact]
+    public void SetSuccess_WithNullableIntContent_SetsContent()
+    {
+        var response = new ContentResponse<int?>();
+
+        response.SetSuccess(100);
+
+        Assert.Equal(100, response.Content);
+        Assert.True(response.Success);
+    }
 }
