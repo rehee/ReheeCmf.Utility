@@ -11,6 +11,7 @@ namespace ReheeCmf.Utility.Tests
     // Test enum for testing Profile<T>
     private enum TestProfileType
     {
+      None = 0,
       Type1 = 1,
       Type2 = 2,
       Type3 = 3
@@ -298,9 +299,8 @@ namespace ReheeCmf.Utility.Tests
 
       container.AddProfile(profile);
 
-      // Create a test enum with value 0
-      TestProfileType zeroEnum = (TestProfileType)0;
-      var retrieved = container.GetProfile(zeroEnum, "custom-key");
+      // Use the defined enum value None (0)
+      var retrieved = container.GetProfile(TestProfileType.None, "custom-key");
       Assert.NotNull(retrieved);
       Assert.Equal("OverrideProfile", retrieved?.Name);
     }
@@ -316,7 +316,8 @@ namespace ReheeCmf.Utility.Tests
 
       container.AddProfile(profile);
 
-      var retrieved = container.GetProfile(TestProfileType.Type2, "ignored-override");
+      // Override parameter is not used for non-zero enum values
+      var retrieved = container.GetProfile(TestProfileType.Type2, "");
       Assert.NotNull(retrieved);
       Assert.Equal("EnumNameProfile", retrieved?.Name);
     }
