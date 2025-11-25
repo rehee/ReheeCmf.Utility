@@ -12,7 +12,7 @@ namespace ReheeCmf.Profiles
     {
       get
       {
-        return Key?.ToString() ?? string.Empty;
+        return Key.ToString();
       }
     }
 
@@ -20,7 +20,7 @@ namespace ReheeCmf.Profiles
     {
       get
       {
-        return Key != null ? Convert.ToInt32(Key) : 0;
+        return Convert.ToInt32(Key);
       }
       set
       {
