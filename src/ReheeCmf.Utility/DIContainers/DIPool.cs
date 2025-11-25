@@ -124,19 +124,6 @@ namespace ReheeCmf.DIContainers
         {
           try
           {
-            // Instantiate the profile
-            var profileInstance = Activator.CreateInstance(profileType) as Profile;
-            if (profileInstance != null)
-            {
-              // Get the container by profile's KeyType
-              var keyType = profileInstance.KeyType;
-              if (_containers.TryGetValue(keyType, out var container))
-              {
-                // Add profile to the corresponding container
-                container.AddProfile(profileInstance);
-              }
-            }
-
             // Execute actions on the profile type (in second loop)
             if (actions != null)
             {
@@ -151,6 +138,19 @@ namespace ReheeCmf.DIContainers
                   // Continue even if an action fails
                   continue;
                 }
+              }
+            }
+
+            // Get the KeyType from the profile type to check if a container exists
+            var keyType = GetProfileKeyType(profileType);
+            if (keyType != null && _containers.TryGetValue(keyType, out var container))
+            {
+              // Only instantiate if we have a matching container
+              var profileInstance = Activator.CreateInstance(profileType) as Profile;
+              if (profileInstance != null)
+              {
+                // Add profile to the corresponding container
+                container.AddProfile(profileInstance);
               }
             }
           }
@@ -184,6 +184,34 @@ namespace ReheeCmf.DIContainers
             if (genericArgs.Length >= 1)
             {
               return genericArgs[0]; // TKey is the first generic argument
+            }
+          }
+        }
+        baseType = baseType.BaseType;
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Gets the KeyType from a Profile type by examining its inheritance chain.
+    /// </summary>
+    private static Type? GetProfileKeyType(Type profileType)
+    {
+      var genericProfileDef = typeof(Profile<>);
+      
+      var baseType = profileType.BaseType;
+      while (baseType != null)
+      {
+        if (baseType.IsGenericType)
+        {
+          var genericDef = baseType.GetGenericTypeDefinition();
+          if (genericDef == genericProfileDef)
+          {
+            var genericArgs = baseType.GetGenericArguments();
+            if (genericArgs.Length >= 1)
+            {
+              return genericArgs[0]; // TKey is the generic argument
             }
           }
         }
@@ -242,19 +270,11 @@ namespace ReheeCmf.DIContainers
         return Enumerable.Empty<T>();
       }
 
-      // Get the KeyType from T
-      var keyType = typeof(T).BaseType;
-      if (keyType != null && keyType.IsGenericType && keyType.GetGenericTypeDefinition() == typeof(Profile<>))
+      // Get the KeyType from T using helper method that traverses inheritance chain
+      var enumKeyType = GetProfileKeyType(typeof(T));
+      if (enumKeyType != null && _containers.TryGetValue(enumKeyType, out var container))
       {
-        var genericArgs = keyType.GetGenericArguments();
-        if (genericArgs.Length > 0)
-        {
-          var enumKeyType = genericArgs[0];
-          if (_containers.TryGetValue(enumKeyType, out var container))
-          {
-            return container.GetAllProfiles().OfType<T>();
-          }
-        }
+        return container.GetAllProfiles().OfType<T>();
       }
 
       return Enumerable.Empty<T>();
