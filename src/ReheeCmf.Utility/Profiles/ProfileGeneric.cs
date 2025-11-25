@@ -8,7 +8,7 @@ namespace ReheeCmf.Profiles
 
     public abstract T Key { get; }
 
-    public override string? StringKeyValue => Key?.ToString() ?? string.Empty;
+    public override string? StringKeyValue => Key?.ToString();
 
     public override int KeyValue => Key != null ? Convert.ToInt32(Key) : 0;
   }
