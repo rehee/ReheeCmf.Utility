@@ -25,6 +25,14 @@ namespace ReheeCmf.Utility.Tests
     // Concrete implementation for testing Profile<T>
     private class TestGenericProfile : Profile<TestProfileType>
     {
+      private readonly TestProfileType _key;
+
+      public TestGenericProfile(TestProfileType key)
+      {
+        _key = key;
+      }
+
+      public override TestProfileType Key => _key;
     }
 
     // Concrete implementation for testing ProfileContainer
@@ -33,7 +41,7 @@ namespace ReheeCmf.Utility.Tests
     }
 
     // Concrete implementation for testing ProfileContainer<T>
-    private class TestGenericProfileContainer : ProfileContainer<TestGenericProfile>
+    private class TestGenericProfileContainer : ProfileContainer<TestProfileType, TestGenericProfile>
     {
     }
 
@@ -89,28 +97,26 @@ namespace ReheeCmf.Utility.Tests
     [Fact]
     public void ProfileGeneric_KeyType_ReturnsCorrectType()
     {
-      var profile = new TestGenericProfile();
+      var profile = new TestGenericProfile(TestProfileType.Type1);
 
       Assert.Equal(typeof(TestProfileType), profile.KeyType);
     }
 
     [Fact]
-    public void ProfileGeneric_SetKey_SetsKeyAndKeyValue()
+    public void ProfileGeneric_Key_ReturnsCorrectValue()
     {
-      var profile = new TestGenericProfile();
-      profile.SetKey(TestProfileType.Type2);
+      var profile = new TestGenericProfile(TestProfileType.Type2);
 
       Assert.Equal(TestProfileType.Type2, profile.Key);
       Assert.Equal(2, profile.KeyValue);
     }
 
     [Fact]
-    public void ProfileGeneric_GetKey_ReturnsKey()
+    public void ProfileGeneric_KeyStringValue_ReturnsStringRepresentation()
     {
-      var profile = new TestGenericProfile();
-      profile.SetKey(TestProfileType.Type3);
+      var profile = new TestGenericProfile(TestProfileType.Type3);
 
-      Assert.Equal(TestProfileType.Type3, profile.GetKey());
+      Assert.Equal("Type3", profile.KeyStringValue);
     }
 
     [Fact]
@@ -123,11 +129,19 @@ namespace ReheeCmf.Utility.Tests
         KeyValue = 1
       };
 
-      container.AddProfile("key1", profile);
+      container.AddProfile(profile);
 
-      var retrieved = container.GetProfile("key1");
+      var retrieved = container.GetProfile("1");
       Assert.NotNull(retrieved);
       Assert.Equal("Profile1", retrieved?.Name);
+    }
+
+    [Fact]
+    public void ProfileContainer_AddProfile_WithNullProfile_ThrowsArgumentNullException()
+    {
+      var container = new TestProfileContainer();
+
+      Assert.Throws<ArgumentNullException>(() => container.AddProfile(null!));
     }
 
     [Fact]
@@ -144,13 +158,17 @@ namespace ReheeCmf.Utility.Tests
     public void ProfileContainer_RemoveProfile_RemovesProfileSuccessfully()
     {
       var container = new TestProfileContainer();
-      var profile = new TestProfile { Name = "Profile1" };
-      container.AddProfile("key1", profile);
+      var profile = new TestProfile 
+      { 
+        Name = "Profile1",
+        KeyValue = 1
+      };
+      container.AddProfile(profile);
 
-      var removed = container.RemoveProfile("key1");
+      var removed = container.RemoveProfile("1");
 
       Assert.True(removed);
-      Assert.Null(container.GetProfile("key1"));
+      Assert.Null(container.GetProfile("1"));
     }
 
     [Fact]
@@ -164,14 +182,24 @@ namespace ReheeCmf.Utility.Tests
     }
 
     [Fact]
+    public void ProfileContainer_RemoveProfile_WithNullKey_ReturnsFalse()
+    {
+      var container = new TestProfileContainer();
+
+      var removed = container.RemoveProfile(null!);
+
+      Assert.False(removed);
+    }
+
+    [Fact]
     public void ProfileContainer_GetAllProfiles_ReturnsAllProfiles()
     {
       var container = new TestProfileContainer();
-      var profile1 = new TestProfile { Name = "Profile1" };
-      var profile2 = new TestProfile { Name = "Profile2" };
+      var profile1 = new TestProfile { Name = "Profile1", KeyValue = 1 };
+      var profile2 = new TestProfile { Name = "Profile2", KeyValue = 2 };
 
-      container.AddProfile("key1", profile1);
-      container.AddProfile("key2", profile2);
+      container.AddProfile(profile1);
+      container.AddProfile(profile2);
 
       var allProfiles = container.GetAllProfiles();
 
@@ -182,15 +210,14 @@ namespace ReheeCmf.Utility.Tests
     public void ProfileContainerGeneric_AddProfile_AddsTypedProfileSuccessfully()
     {
       var container = new TestGenericProfileContainer();
-      var profile = new TestGenericProfile
+      var profile = new TestGenericProfile(TestProfileType.Type1)
       {
         Name = "GenericProfile1"
       };
-      profile.SetKey(TestProfileType.Type1);
 
-      container.AddProfile("key1", profile);
+      container.AddProfile(profile);
 
-      var retrieved = container.GetProfile("key1");
+      var retrieved = container.GetProfile("1");
       Assert.NotNull(retrieved);
       Assert.Equal("GenericProfile1", retrieved?.Name);
       Assert.Equal(TestProfileType.Type1, retrieved?.Key);
@@ -200,11 +227,11 @@ namespace ReheeCmf.Utility.Tests
     public void ProfileContainerGeneric_GetAllProfiles_ReturnsTypedProfiles()
     {
       var container = new TestGenericProfileContainer();
-      var profile1 = new TestGenericProfile { Name = "Profile1" };
-      var profile2 = new TestGenericProfile { Name = "Profile2" };
+      var profile1 = new TestGenericProfile(TestProfileType.Type1) { Name = "Profile1" };
+      var profile2 = new TestGenericProfile(TestProfileType.Type2) { Name = "Profile2" };
 
-      container.AddProfile("key1", profile1);
-      container.AddProfile("key2", profile2);
+      container.AddProfile(profile1);
+      container.AddProfile(profile2);
 
       var allProfiles = container.GetAllProfiles();
 

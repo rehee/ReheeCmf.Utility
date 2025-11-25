@@ -21,13 +21,29 @@ namespace ReheeCmf.Profiles
       return null;
     }
 
-    public void AddProfile(string key, Profile profile)
+    public void AddProfile(Profile profile)
     {
+      if (profile == null)
+      {
+        throw new ArgumentNullException(nameof(profile));
+      }
+
+      var key = profile.GetEffectiveKey();
+      if (string.IsNullOrEmpty(key))
+      {
+        throw new ArgumentException("Profile key cannot be null or empty", nameof(profile));
+      }
+
       Profiles[key] = profile;
     }
 
     public bool RemoveProfile(string key)
     {
+      if (string.IsNullOrEmpty(key))
+      {
+        return false;
+      }
+
       return Profiles.Remove(key);
     }
 

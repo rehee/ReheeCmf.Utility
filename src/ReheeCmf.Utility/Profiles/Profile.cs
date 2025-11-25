@@ -10,17 +10,23 @@ namespace ReheeCmf.Profiles
 
     public abstract Type KeyType { get; }
     
-    public int KeyValue { get; set; }
+    public virtual int KeyValue { get; set; }
     
     public string? StringKeyValue { get; set; }
 
     public string GetEffectiveKey()
     {
-      if (KeyValue == 0 && !string.IsNullOrEmpty(StringKeyValue))
+      if (KeyValue != 0)
+      {
+        return KeyValue.ToString();
+      }
+      
+      if (!string.IsNullOrEmpty(StringKeyValue))
       {
         return StringKeyValue;
       }
-      return KeyValue.ToString();
+      
+      return "0";
     }
   }
 }

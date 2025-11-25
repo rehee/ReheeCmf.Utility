@@ -4,22 +4,24 @@ using System.Linq;
 
 namespace ReheeCmf.Profiles
 {
-  public abstract class ProfileContainer<T> : ProfileContainer where T : Profile
+  public abstract class ProfileContainer<TKey, TProfile> : ProfileContainer 
+    where TKey : Enum 
+    where TProfile : Profile<TKey>
   {
-    public new T? GetProfile(string key)
+    public new TProfile? GetProfile(string key)
     {
       var profile = base.GetProfile(key);
-      return profile as T;
+      return profile as TProfile;
     }
 
-    public void AddProfile(string key, T profile)
+    public void AddProfile(TProfile profile)
     {
-      base.AddProfile(key, profile);
+      base.AddProfile(profile);
     }
 
-    public new IEnumerable<T> GetAllProfiles()
+    public new IEnumerable<TProfile> GetAllProfiles()
     {
-      return base.GetAllProfiles().OfType<T>();
+      return base.GetAllProfiles().OfType<TProfile>();
     }
   }
 }

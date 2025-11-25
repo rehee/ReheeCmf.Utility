@@ -364,7 +364,7 @@ Abstract base class for profile types. Implements `IWithName` and is typically u
 **Methods:**
 | Method | Return Type | Description |
 |--------|-------------|-------------|
-| `GetEffectiveKey()` | `string` | Returns StringKeyValue if KeyValue is 0 and StringKeyValue is not empty, otherwise returns KeyValue as string |
+| `GetEffectiveKey()` | `string` | Returns KeyValue as string if non-zero, otherwise returns StringKeyValue if not empty, otherwise returns "0" |
 
 **Usage Example:**
 ```csharp
@@ -388,7 +388,7 @@ string key = profile.GetEffectiveKey(); // Returns "main-config"
 
 Location: `ReheeCmf.Profiles`
 
-Generic abstract profile class that inherits from `Profile`. The type parameter `T` must be an enum type.
+Generic abstract profile class that inherits from `Profile`. The type parameter `T` must be an enum type. The `Key` property must be implemented by derived classes.
 
 **Type Parameter:**
 - `T` - Type of the key, must be an Enum
@@ -397,13 +397,9 @@ Generic abstract profile class that inherits from `Profile`. The type parameter 
 | Property | Type | Description |
 |----------|------|-------------|
 | `KeyType` | `Type` | Returns `typeof(T)` (override) |
-| `Key` | `T?` | Strongly-typed enum key |
-
-**Methods:**
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `SetKey(T key)` | `void` | Sets the Key and updates KeyValue to the integer representation |
-| `GetKey()` | `T?` | Returns the strongly-typed key |
+| `Key` | `T` | Abstract property - strongly-typed enum key that must be implemented by derived class |
+| `KeyStringValue` | `string` | Returns the string representation of the Key |
+| `KeyValue` | `int` | Returns the integer value of the Key (override, computed from Key) |
 
 **Usage Example:**
 ```csharp
@@ -416,18 +412,26 @@ public enum ProfileCategory
 
 public class CategoryProfile : Profile<ProfileCategory>
 {
+  private readonly ProfileCategory _category;
+  
+  public CategoryProfile(ProfileCategory category)
+  {
+    _category = category;
+  }
+  
+  public override ProfileCategory Key => _category;
 }
 
-var profile = new CategoryProfile
+var profile = new CategoryProfile(ProfileCategory.System)
 {
   Name = "System Profile",
   Description = "System level configuration"
 };
-profile.SetKey(ProfileCategory.System);
 
 // Access strongly-typed key
-ProfileCategory? category = profile.GetKey(); // Returns ProfileCategory.System
+ProfileCategory category = profile.Key; // Returns ProfileCategory.System
 int keyValue = profile.KeyValue; // Returns 1
+string keyString = profile.KeyStringValue; // Returns "System"
 ```
 
 ### ProfileContainer (Abstract Base Class)
@@ -440,8 +444,8 @@ Abstract base class for managing a collection of Profile instances. Provides dic
 | Method | Return Type | Description |
 |--------|-------------|-------------|
 | `GetProfile(string key)` | `Profile?` | Retrieves a profile by key, returns null if not found |
-| `AddProfile(string key, Profile profile)` | `void` | Adds or updates a profile with the specified key |
-| `RemoveProfile(string key)` | `bool` | Removes a profile by key, returns true if successful |
+| `AddProfile(Profile profile)` | `void` | Adds or updates a profile using its effective key. Throws ArgumentNullException if profile is null or key is empty |
+| `RemoveProfile(string key)` | `bool` | Removes a profile by key, returns true if successful, false if key is null/empty or not found |
 | `GetAllProfiles()` | `IEnumerable<Profile>` | Returns all profiles in the container |
 
 **Usage Example:**
@@ -451,45 +455,67 @@ public class MyProfileContainer : ProfileContainer
 }
 
 var container = new MyProfileContainer();
-var profile = new MyProfile { Name = "Config1" };
-container.AddProfile("config1", profile);
+var profile = new MyProfile 
+{ 
+  Name = "Config1",
+  KeyValue = 1
+};
+container.AddProfile(profile); // Uses profile.GetEffectiveKey() as the key
 
-var retrieved = container.GetProfile("config1");
+var retrieved = container.GetProfile("1");
 var allProfiles = container.GetAllProfiles();
 ```
 
-### ProfileContainer\<T\> (Abstract Generic Class)
+### ProfileContainer\<TKey, TProfile\> (Abstract Generic Class)
 
 Location: `ReheeCmf.Profiles`
 
-Generic abstract profile container that inherits from `ProfileContainer`. Provides strongly-typed access to profiles of type `T`.
+Generic abstract profile container that inherits from `ProfileContainer`. Provides strongly-typed access to profiles.
 
-**Type Parameter:**
-- `T` - Type of profiles in the container, must inherit from Profile
+**Type Parameters:**
+- `TKey` - Type of the enum key, must be an Enum
+- `TProfile` - Type of profiles in the container, must inherit from Profile<TKey>
 
 **Methods:**
 | Method | Return Type | Description |
 |--------|-------------|-------------|
-| `GetProfile(string key)` | `T?` | Retrieves a strongly-typed profile by key, returns null if not found |
-| `AddProfile(string key, T profile)` | `void` | Adds or updates a strongly-typed profile with the specified key |
-| `GetAllProfiles()` | `IEnumerable<T>` | Returns all profiles in the container as strongly-typed collection |
+| `GetProfile(string key)` | `TProfile?` | Retrieves a strongly-typed profile by key, returns null if not found |
+| `AddProfile(TProfile profile)` | `void` | Adds or updates a strongly-typed profile using its effective key |
+| `GetAllProfiles()` | `IEnumerable<TProfile>` | Returns all profiles in the container as strongly-typed collection |
 
 **Usage Example:**
 ```csharp
-public class MyGenericProfileContainer : ProfileContainer<CategoryProfile>
+public enum ProfileCategory
+{
+  System = 1,
+  User = 2
+}
+
+public class CategoryProfile : Profile<ProfileCategory>
+{
+  private readonly ProfileCategory _category;
+  
+  public CategoryProfile(ProfileCategory category)
+  {
+    _category = category;
+  }
+  
+  public override ProfileCategory Key => _category;
+}
+
+public class CategoryProfileContainer : ProfileContainer<ProfileCategory, CategoryProfile>
 {
 }
 
-var container = new MyGenericProfileContainer();
-var profile = new CategoryProfile
+var container = new CategoryProfileContainer();
+var profile = new CategoryProfile(ProfileCategory.System)
 {
-  Name = "Admin Profile"
+  Name = "System Profile"
 };
-profile.SetKey(ProfileCategory.Admin);
 
-container.AddProfile("admin", profile);
+container.AddProfile(profile); // Uses profile.GetEffectiveKey() as the key
 
-CategoryProfile? retrieved = container.GetProfile("admin");
+CategoryProfile? retrieved = container.GetProfile("1");
 IEnumerable<CategoryProfile> allProfiles = container.GetAllProfiles();
 ```
 

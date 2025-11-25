@@ -6,17 +6,27 @@ namespace ReheeCmf.Profiles
   {
     public override Type KeyType => typeof(T);
 
-    public T? Key { get; set; }
+    public abstract T Key { get; }
 
-    public void SetKey(T key)
+    public string KeyStringValue
     {
-      Key = key;
-      KeyValue = Convert.ToInt32(key);
+      get
+      {
+        return Key?.ToString() ?? string.Empty;
+      }
     }
 
-    public T? GetKey()
+    public override int KeyValue
     {
-      return Key;
+      get
+      {
+        return Key != null ? Convert.ToInt32(Key) : 0;
+      }
+      set
+      {
+        // KeyValue is derived from Key, so setting it has no effect
+        // but we need this setter to override the base property
+      }
     }
   }
 }
