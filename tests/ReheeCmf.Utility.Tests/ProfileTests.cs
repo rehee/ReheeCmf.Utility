@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Xunit;
 using ReheeCmf.Entities;
 using ReheeCmf.Profiles;
@@ -174,7 +175,7 @@ namespace ReheeCmf.Utility.Tests
 
       var allProfiles = container.GetAllProfiles();
 
-      Assert.Equal(2, System.Linq.Enumerable.Count(allProfiles));
+      Assert.Equal(2, allProfiles.Count());
     }
 
     [Fact]
@@ -207,7 +208,7 @@ namespace ReheeCmf.Utility.Tests
 
       var allProfiles = container.GetAllProfiles();
 
-      Assert.Equal(2, System.Linq.Enumerable.Count(allProfiles));
+      Assert.Equal(2, allProfiles.Count());
       Assert.All(allProfiles, p => Assert.IsType<TestGenericProfile>(p));
     }
   }

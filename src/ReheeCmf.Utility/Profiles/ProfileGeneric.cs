@@ -8,14 +8,6 @@ namespace ReheeCmf.Profiles
 
     public T? Key { get; set; }
 
-    public Profile()
-    {
-      if (Key != null)
-      {
-        KeyValue = Convert.ToInt32(Key);
-      }
-    }
-
     public void SetKey(T key)
     {
       Key = key;
