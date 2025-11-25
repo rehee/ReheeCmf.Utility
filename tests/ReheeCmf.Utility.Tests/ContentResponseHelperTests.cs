@@ -8,7 +8,7 @@ namespace ReheeCmf.Utility.Tests;
 public class ContentResponseHelperTests
 {
     [Fact]
-    public void SetContent_SetsAllProperties()
+    public void SetContent_Generic_SetsAllProperties()
     {
         var response = new ContentResponse<string>();
         var error = new Error();
@@ -23,7 +23,7 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetContent_WithNullContent_SetsContentToDefault()
+    public void SetContent_Generic_WithNullContent_SetsContentToDefault()
     {
         var response = new ContentResponse<string>();
 
@@ -35,7 +35,7 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetContent_WithConvertibleContent_ConvertsContent()
+    public void SetContent_Generic_WithIntContent_SetsContent()
     {
         var response = new ContentResponse<int>();
 
@@ -46,18 +46,54 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetContent_WithIncompatibleContent_SetsContentToDefault()
+    public void SetContent_NonGeneric_WithMatchingType_SetsContent()
     {
-        var response = new ContentResponse<int>();
+        ContentResponse response = new ContentResponse<string>();
 
-        response.SetContent("not a number", false, HttpStatusCode.BadRequest);
+        response.SetContent("test content", true, HttpStatusCode.OK);
 
-        Assert.Equal(default, response.Content);
+        var typedResponse = (ContentResponse<string>)response;
+        Assert.Equal("test content", typedResponse.Content);
+        Assert.True(response.Success);
+        Assert.Equal(HttpStatusCode.OK, response.Status);
+    }
+
+    [Fact]
+    public void SetContent_NonGeneric_WithConvertibleContent_ConvertsContent()
+    {
+        ContentResponse response = new ContentResponse<int>();
+
+        response.SetContent(42, true, HttpStatusCode.OK);
+
+        var typedResponse = (ContentResponse<int>)response;
+        Assert.Equal(42, typedResponse.Content);
+        Assert.True(response.Success);
+    }
+
+    [Fact]
+    public void SetContent_NonGeneric_WithIncompatibleContent_SetsSuccessToFalse()
+    {
+        ContentResponse response = new ContentResponse<int>();
+
+        response.SetContent("not a number", true, HttpStatusCode.OK);
+
         Assert.False(response.Success);
     }
 
     [Fact]
-    public void SetContent_WithNoErrors_DoesNotSetErrors()
+    public void SetContent_NonGeneric_WithNullableIntContent_ConvertsContent()
+    {
+        ContentResponse response = new ContentResponse<int?>();
+
+        response.SetContent(42, true, HttpStatusCode.OK);
+
+        var typedResponse = (ContentResponse<int?>)response;
+        Assert.Equal(42, typedResponse.Content);
+        Assert.True(response.Success);
+    }
+
+    [Fact]
+    public void SetContent_Generic_WithNoErrors_DoesNotSetErrors()
     {
         var response = new ContentResponse<string>();
 
@@ -67,7 +103,7 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetSuccess_SetsSuccessToTrueAndStatusToOK()
+    public void SetSuccess_Generic_SetsSuccessToTrueAndStatusToOK()
     {
         var response = new ContentResponse<string>();
 
@@ -80,7 +116,7 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetSuccess_WithIntegerContent_SetsContent()
+    public void SetSuccess_Generic_WithIntegerContent_SetsContent()
     {
         var response = new ContentResponse<int>();
 
@@ -92,7 +128,20 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetErrors_SetsSuccessToFalseAndSetsErrors()
+    public void SetSuccess_NonGeneric_WithObjectContent_SetsContent()
+    {
+        ContentResponse response = new ContentResponse<string>();
+
+        response.SetSuccess("success content");
+
+        var typedResponse = (ContentResponse<string>)response;
+        Assert.Equal("success content", typedResponse.Content);
+        Assert.True(response.Success);
+        Assert.Equal(HttpStatusCode.OK, response.Status);
+    }
+
+    [Fact]
+    public void SetErrors_Generic_SetsSuccessToFalseAndSetsErrors()
     {
         var response = new ContentResponse<string>();
         var error1 = new Error();
@@ -108,7 +157,7 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetErrors_WithInternalServerError_SetsCorrectStatus()
+    public void SetErrors_Generic_WithInternalServerError_SetsCorrectStatus()
     {
         var response = new ContentResponse<object>();
         var error = new Error();
@@ -117,6 +166,19 @@ public class ContentResponseHelperTests
 
         Assert.False(response.Success);
         Assert.Equal(HttpStatusCode.InternalServerError, response.Status);
+    }
+
+    [Fact]
+    public void SetErrors_NonGeneric_SetsSuccessToFalseAndSetsErrors()
+    {
+        ContentResponse response = new ContentResponse<string>();
+        var error = new Error();
+
+        response.SetErrors(HttpStatusCode.NotFound, error);
+
+        Assert.False(response.Success);
+        Assert.Equal(HttpStatusCode.NotFound, response.Status);
+        Assert.NotNull(response.Errors);
     }
 
     [Fact]
@@ -142,7 +204,7 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetContent_WithNullableIntContent_ConvertsContent()
+    public void SetContent_Generic_WithNullableIntContent_SetsContent()
     {
         var response = new ContentResponse<int?>();
 
@@ -153,7 +215,7 @@ public class ContentResponseHelperTests
     }
 
     [Fact]
-    public void SetSuccess_WithNullableIntContent_SetsContent()
+    public void SetSuccess_Generic_WithNullableIntContent_SetsContent()
     {
         var response = new ContentResponse<int?>();
 

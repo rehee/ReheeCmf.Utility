@@ -60,16 +60,16 @@ Placeholder class for error information.
 
 Location: `ReheeCmf.Helpers`
 
-Static class providing extension methods for `ContentResponse<T>`.
+Static class providing extension methods for both `ContentResponse<T>` and base `ContentResponse`.
 
-#### SetContent
+#### SetContent (Generic)
 
-Sets all properties on a `ContentResponse<T>`.
+Sets all properties on a `ContentResponse<T>` with typed content.
 
 ```csharp
 public static void SetContent<T>(
     this ContentResponse<T> response,
-    object? content,
+    T? content,
     bool? success,
     HttpStatusCode? code,
     params Error[] errors)
@@ -77,7 +77,7 @@ public static void SetContent<T>(
 
 **Parameters:**
 - `response`: The response instance to modify
-- `content`: Content value (will be converted to type T)
+- `content`: Typed content value
 - `success`: Whether the operation succeeded
 - `code`: HTTP status code
 - `errors`: Optional error collection
@@ -88,14 +88,47 @@ var response = new ContentResponse<int>();
 response.SetContent(42, true, HttpStatusCode.OK);
 ```
 
-#### SetSuccess
+#### SetContent (Non-Generic)
 
-Convenience method for successful responses.
+Sets all properties on a base `ContentResponse` using reflection to determine the generic type and convert content.
+
+```csharp
+public static void SetContent(
+    this ContentResponse response,
+    object? content,
+    bool? success,
+    HttpStatusCode? code,
+    params Error[] errors)
+```
+
+**Parameters:**
+- `response`: The response instance to modify (must be a `ContentResponse<T>` instance)
+- `content`: Content value (will be converted to type T via reflection)
+- `success`: Whether the operation succeeded
+- `code`: HTTP status code
+- `errors`: Optional error collection
+
+**Behavior:**
+- Automatically detects the generic type T of the response
+- Attempts to convert the content to type T
+- If conversion fails, sets `Success` to `false` and content to default
+- Supports nullable types via `Nullable.GetUnderlyingType`
+
+**Example:**
+```csharp
+ContentResponse response = new ContentResponse<int>();
+response.SetContent(42, true, HttpStatusCode.OK);
+// Content is automatically converted to int
+```
+
+#### SetSuccess (Generic)
+
+Convenience method for successful responses with typed content.
 
 ```csharp
 public static void SetSuccess<T>(
     this ContentResponse<T> response,
-    object? content)
+    T? content)
 ```
 
 Sets:
@@ -109,9 +142,30 @@ var response = new ContentResponse<string>();
 response.SetSuccess("Operation completed");
 ```
 
-#### SetErrors
+#### SetSuccess (Non-Generic)
 
-Convenience method for error responses.
+Convenience method for successful responses using base ContentResponse.
+
+```csharp
+public static void SetSuccess(
+    this ContentResponse response,
+    object? content)
+```
+
+Sets:
+- `Success` to `true`
+- `Status` to `HttpStatusCode.OK`
+- `Content` to the provided value (converted via reflection)
+
+**Example:**
+```csharp
+ContentResponse response = new ContentResponse<string>();
+response.SetSuccess("Operation completed");
+```
+
+#### SetErrors (Generic)
+
+Convenience method for error responses with typed content.
 
 ```csharp
 public static void SetErrors<T>(
@@ -124,7 +178,7 @@ Sets:
 - `Success` to `false`
 - `Status` to the provided code
 - `Errors` to the provided error collection
-- `Content` to `null`
+- `Content` to default
 
 **Example:**
 ```csharp
@@ -132,9 +186,32 @@ var response = new ContentResponse<string>();
 response.SetErrors(HttpStatusCode.BadRequest, new Error(), new Error());
 ```
 
+#### SetErrors (Non-Generic)
+
+Convenience method for error responses using base ContentResponse.
+
+```csharp
+public static void SetErrors(
+    this ContentResponse response,
+    HttpStatusCode code,
+    params Error[] errors)
+```
+
+Sets:
+- `Success` to `false`
+- `Status` to the provided code
+- `Errors` to the provided error collection
+- `Content` to null
+
+**Example:**
+```csharp
+ContentResponse response = new ContentResponse<string>();
+response.SetErrors(HttpStatusCode.NotFound, new Error());
+```
+
 ## Usage Patterns
 
-### Basic Success Response
+### Basic Success Response (Generic)
 ```csharp
 using ReheeCmf.Commons;
 using ReheeCmf.Helpers;
@@ -145,6 +222,15 @@ response.SetSuccess(new UserDto { Id = 1, Name = "John" });
 // response.Success == true
 // response.Status == HttpStatusCode.OK
 // response.Content == UserDto instance
+```
+
+### Using Base ContentResponse (Non-Generic)
+```csharp
+ContentResponse response = new ContentResponse<UserDto>();
+response.SetSuccess(new UserDto { Id = 1, Name = "John" });
+// Automatically converts content via reflection
+// response.Success == true
+// response.Status == HttpStatusCode.OK
 ```
 
 ### Error Response
