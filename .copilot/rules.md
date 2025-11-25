@@ -16,23 +16,7 @@
 
 ## 2. C# 风格（C# Style）
 
-1.  `.cs` 文件的 namespace 必须使用 **文件作用域命名空间**格式：
-
-    **允许：**
-
-    ``` csharp
-    namespace MyProject.Services;
-    ```
-
-    **禁止：**
-
-    ``` csharp
-    namespace MyProject.Services
-    {
-    }
-    ```
-
-2.  禁止将 `if` 判断写成单行语句。
+1.  禁止将 `if` 判断写成单行语句。
 
     **允许：**
 
