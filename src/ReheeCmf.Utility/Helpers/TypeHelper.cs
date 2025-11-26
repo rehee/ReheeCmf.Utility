@@ -125,6 +125,13 @@ namespace ReheeCmf.Helpers
 			return false;
 		}
 
+		/// <summary>
+		/// Checks if a type inherits from the specified generic class or implements the specified interface.
+		/// Checks base classes layer by layer until no base class is found.
+		/// </summary>
+		/// <typeparam name="T">The base class or interface type to check for.</typeparam>
+		/// <param name="checkType">The type to check.</param>
+		/// <returns>True if the type inherits from the class or implements the interface, false otherwise.</returns>
 		public static bool InheritsFrom<T>(this Type checkType)
 		{
 			return checkType.InheritsFrom(typeof(T));

@@ -82,9 +82,36 @@ namespace ReheeCmf.Utility.Tests
       Assert.Equal("testValue", item.Value);
     }
 
+    [Fact]
+    public void IWithKeyType_CanBeImplemented()
+    {
+      var entity = new TestKeyTypeEntity();
+      Assert.Equal(typeof(int), entity.KeyType);
+    }
+
+    [Fact]
+    public void IWithKeyType_CanReturnDifferentKeyTypes()
+    {
+      var intKeyEntity = new TestKeyTypeEntity();
+      var stringKeyEntity = new TestStringKeyTypeEntity();
+
+      Assert.Equal(typeof(int), intKeyEntity.KeyType);
+      Assert.Equal(typeof(string), stringKeyEntity.KeyType);
+    }
+
     private class TestEntity : IId<Guid>
     {
       public Guid Id { get; set; }
+    }
+
+    private class TestKeyTypeEntity : IWIthKeyType
+    {
+      public Type KeyType => typeof(int);
+    }
+
+    private class TestStringKeyTypeEntity : IWIthKeyType
+    {
+      public Type KeyType => typeof(string);
     }
   }
 }
