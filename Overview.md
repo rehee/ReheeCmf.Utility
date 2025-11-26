@@ -10,7 +10,7 @@
 
 - `ReheeCmf` - Root namespace
 - `ReheeCmf.Attributes` - Attribute types
-- `ReheeCmf.Commons` - Common types and response models
+- `ReheeCmf.Commons` - Common types, response models, delegates, and interfaces
 - `ReheeCmf.DIContainers` - Dependency injection container types
 - `ReheeCmf.Helpers` - Helper and extension methods
 - `ReheeCmf.Entities` - Entity interfaces
@@ -160,6 +160,49 @@ var item = new KeyValueItemDTO
   Key = "userId",
   Value = "12345"
 };
+```
+
+### IWithKeyType
+
+Location: `ReheeCmf.Commons`
+
+Interface for types that have a key type property. Used to identify the type of key used by profiles and other keyed entities.
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `KeyType` | `Type` | Gets the type of the key used by this entity |
+
+**Usage Example:**
+```csharp
+public class MyKeyedEntity : IWIthKeyType
+{
+  public Type KeyType => typeof(int);
+}
+```
+
+### PoolInitialize
+
+Location: `ReheeCmf.Commons`
+
+Delegate for initializing profiles during DIPool initialization. Used to execute custom actions on each discovered Profile type.
+
+**Signature:**
+```csharp
+public delegate void PoolInitialize(Type profileType);
+```
+
+**Parameters:**
+- `profileType` - The type of the profile being initialized
+
+**Usage Example:**
+```csharp
+PoolInitialize action = (profileType) => 
+{
+  Console.WriteLine($"Initializing profile: {profileType.Name}");
+};
+
+DIPool.Initialize(action);
 ```
 
 ## Entity Types
