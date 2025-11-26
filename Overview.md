@@ -9,7 +9,9 @@
 ## Namespaces
 
 - `ReheeCmf` - Root namespace
+- `ReheeCmf.Attributes` - Attribute types
 - `ReheeCmf.Commons` - Common types and response models
+- `ReheeCmf.DIContainers` - Dependency injection container types
 - `ReheeCmf.Helpers` - Helper and extension methods
 - `ReheeCmf.Entities` - Entity interfaces
 - `ReheeCmf.Users` - User and tenant related types
@@ -19,6 +21,83 @@
 - `ReheeCmf.ProfileContainers` - Profile container types
 
 ## Types
+
+## Attribute Types
+
+### PooledAttribute
+
+Location: `ReheeCmf.Attributes`
+
+Attribute that can only be applied to classes. Used to mark classes for pooling or special handling.
+
+**Usage:**
+- `AttributeTargets.Class` - Can only be applied to classes
+- `AllowMultiple = false` - Cannot be applied multiple times to the same class
+- `Inherited = true` - Inherited by derived classes
+
+**Usage Example:**
+```csharp
+[Pooled]
+public class MyPooledClass
+{
+  // Class implementation
+}
+```
+
+## Dependency Injection Types
+
+### DIPool
+
+Location: `ReheeCmf.DIContainers`
+
+A static "Poor Man's DI" dependency injection container pool for managing ProfileContainer and Profile instances.
+
+**Methods:**
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `Initialize(params Action<Type>[] actions)` | `void` | Initializes the DI pool by scanning assemblies for ProfileContainer and Profile types. Can only be called once. Thread-safe. |
+| `GetProfile(string key)` | `Profile?` | Retrieves a Profile by string key from all containers |
+| `GetProfile(Enum key, string? keyOverride = null)` | `Profile?` | Retrieves a Profile by enum key from all containers |
+| `GetProfile<T>()` | `T?` | Retrieves a Profile by generic type from all containers |
+| `GetAllProfiles<T>()` | `IEnumerable<T>` | Returns all profiles of a specific type from all containers |
+| `GetContainer<TContainer>()` | `TContainer?` | Retrieves a ProfileContainer by its type |
+| `Reset()` | `void` | Resets the DIPool (primarily for testing purposes) |
+
+**Properties:**
+| Property | Type | Description |
+|----------|------|-------------|
+| `IsInitialized` | `bool` | Gets whether the pool has been initialized |
+
+**Initialization Logic:**
+1. Scans all assemblies for types that inherit from `ProfileContainer` and are not abstract
+2. Creates instances of discovered ProfileContainer types and caches them
+3. Scans all assemblies for types that inherit from `Profile` and are not abstract
+4. Executes optional actions on each discovered Profile type
+5. Creates instances of Profile types and adds them to matching containers
+6. Initialization only occurs once, subsequent calls return immediately
+
+**Usage Example:**
+```csharp
+// Initialize the DI pool
+DIPool.Initialize(
+  profileType => Console.WriteLine($"Discovered: {profileType.Name}")
+);
+
+// Retrieve a profile by string key
+var profile = DIPool.GetProfile("MyProfileKey");
+
+// Retrieve a profile by enum key
+var profile2 = DIPool.GetProfile(MyEnum.Value);
+
+// Retrieve a strongly-typed profile
+var myProfile = DIPool.GetProfile<MyProfile>();
+
+// Get all profiles of a specific type
+var allProfiles = DIPool.GetAllProfiles<MyProfile>();
+
+// Get a container
+var container = DIPool.GetContainer<MyProfileContainer>();
+```
 
 ### ContentResponse (Abstract Base Class)
 
@@ -542,6 +621,150 @@ IEnumerable<CategoryProfile> allProfiles = container.GetAllProfiles();
 
 ## Helper Methods
 
+### TypeHelper
+
+Location: `ReheeCmf.Helpers`
+
+Static class providing extension methods for type inspection and reflection operations.
+
+#### HasAttribute<TAttribute> (Generic)
+
+Checks if a type is decorated with the specified attribute.
+
+```csharp
+public static bool HasAttribute<TAttribute>(this Type type) where TAttribute : Attribute
+```
+
+**Parameters:**
+- `type`: The type to check
+- `TAttribute`: The attribute type to check for (must be an Attribute)
+
+**Returns:**
+- `true` if the type has the attribute, `false` otherwise (or if type is null)
+
+**Example:**
+```csharp
+var type = typeof(MyClass);
+bool hasPooled = type.HasAttribute<PooledAttribute>();
+```
+
+#### HasAttribute (Type Parameter)
+
+Checks if a type is decorated with the specified attribute using a type parameter.
+
+```csharp
+public static bool HasAttribute(this Type type, Type attributeType)
+```
+
+**Parameters:**
+- `type`: The type to check
+- `attributeType`: The attribute type to check for (must be an Attribute)
+
+**Returns:**
+- `true` if the type has the attribute, `false` otherwise (or if either parameter is null or attributeType is not an Attribute)
+
+**Example:**
+```csharp
+var type = typeof(MyClass);
+var attrType = typeof(PooledAttribute);
+bool hasAttribute = type.HasAttribute(attrType);
+```
+
+#### ImplementsInterface
+
+Checks if a type implements the specified interface. Checks base classes layer by layer until no base class is found.
+
+```csharp
+public static bool ImplementsInterface(this Type type, Type interfaceType)
+```
+
+**Parameters:**
+- `type`: The type to check
+- `interfaceType`: The interface type to check for (must be an interface)
+
+**Returns:**
+- `true` if the type implements the interface, `false` otherwise
+
+**Behavior:**
+- Checks the type and all base classes in the inheritance hierarchy
+- Supports generic interface matching
+
+**Example:**
+```csharp
+var type = typeof(MyClass);
+bool implementsIDisposable = type.ImplementsInterface(typeof(IDisposable));
+```
+
+#### InheritsFrom
+
+Checks if a type inherits from the specified class or implements the specified interface. Checks base classes layer by layer until no base class is found.
+
+```csharp
+public static bool InheritsFrom(this Type type, Type baseType)
+```
+
+**Parameters:**
+- `type`: The type to check
+- `baseType`: The base class or interface type to check for
+
+**Returns:**
+- `true` if the type inherits from the class or implements the interface, `false` otherwise
+
+**Behavior:**
+- If baseType is an interface, delegates to `ImplementsInterface`
+- Checks the type and all base classes in the inheritance hierarchy
+- Supports generic type matching
+
+**Example:**
+```csharp
+var type = typeof(DerivedClass);
+bool inherits = type.InheritsFrom(typeof(BaseClass));
+```
+
+#### ImplementsInterface<T> (Generic)
+
+Checks if a generic type implements the specified interface.
+
+```csharp
+public static bool ImplementsInterface<T>(Type interfaceType)
+```
+
+**Type Parameter:**
+- `T`: The type to check
+
+**Parameters:**
+- `interfaceType`: The interface type to check for
+
+**Returns:**
+- `true` if the type implements the interface, `false` otherwise
+
+**Example:**
+```csharp
+bool implementsInterface = TypeHelper.ImplementsInterface<MyClass>(typeof(IDisposable));
+```
+
+#### InheritsFrom<T> (Generic)
+
+Checks if a generic type inherits from the specified class or implements the specified interface.
+
+```csharp
+public static bool InheritsFrom<T>(Type baseType)
+```
+
+**Type Parameter:**
+- `T`: The type to check
+
+**Parameters:**
+- `baseType`: The base class or interface type to check for
+
+**Returns:**
+- `true` if the type inherits from the class or implements the interface, `false` otherwise
+
+**Example:**
+```csharp
+bool inherits = TypeHelper.InheritsFrom<DerivedClass>(typeof(BaseClass));
+```
+
 ### ContentResponseHelper
 
 Location: `ReheeCmf.Helpers`
@@ -874,6 +1097,8 @@ dotnet test --verbosity normal
 ReheeCmf.Utility/
 ├── src/
 │   └── ReheeCmf.Utility/
+│       ├── Attributes/
+│       │   └── PooledAttribute.cs       # Pooled attribute for classes
 │       ├── Commons/
 │       │   ├── ContentResponse.cs       # ContentResponse and ContentResponse<T>
 │       │   ├── Error.cs                 # Error placeholder class
@@ -886,6 +1111,8 @@ ReheeCmf.Utility/
 │       │   ├── ITenantContext.cs        # Tenant context interface
 │       │   ├── ITokenDTOContext.cs      # Token DTO context interface
 │       │   └── IWithTenant.cs           # With tenant interface
+│       ├── DIContainers/
+│       │   └── DIPool.cs                # Poor Man's DI container pool
 │       ├── Entities/
 │       │   ├── IId.cs                   # Generic ID interface
 │       │   └── IWithName.cs             # Name and description interface
@@ -893,7 +1120,8 @@ ReheeCmf.Utility/
 │       │   └── EnumEntityState.cs       # Entity state enumeration
 │       ├── Helpers/
 │       │   ├── ContentResponseHelper.cs # Extension methods for ContentResponse
-│       │   └── DictionaryHelper.cs      # Extension methods for IDictionary
+│       │   ├── DictionaryHelper.cs      # Extension methods for IDictionary
+│       │   └── TypeHelper.cs            # Type inspection and reflection helpers
 │       ├── Profiles/
 │       │   ├── Profile.cs               # Abstract base profile class
 │       │   └── ProfileGeneric.cs        # Generic profile<T> class
@@ -908,9 +1136,12 @@ ReheeCmf.Utility/
 └── tests/
     └── ReheeCmf.Utility.Tests/
         ├── ContentResponseHelperTests.cs  # ContentResponse helper tests
+        ├── DIPoolTests.cs                 # DIPool tests
         ├── DictionaryHelperTests.cs       # Dictionary helper tests
         ├── EntityTypesTests.cs            # Entity types tests
+        ├── PooledAttributeTests.cs        # PooledAttribute tests
         ├── ProfileTests.cs                # Profile and ProfileContainer tests
+        ├── TypeHelperTests.cs             # TypeHelper tests
         ├── UnitTest1.cs                   # Sample test
         └── ReheeCmf.Utility.Tests.csproj
 ```
